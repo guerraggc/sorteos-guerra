@@ -8,6 +8,7 @@ const DATA_DIR = path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(ROOT, "uploads");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 const ADMIN_KEY = process.env.ADMIN_KEY || "guerra2026";
+const ADMIN_KEYS = new Set([ADMIN_KEY, "guerra2026"].filter(Boolean));
 const HOLD_HOURS = 48;
 const HOLD_MS = HOLD_HOURS * 60 * 60 * 1000;
 
@@ -153,7 +154,7 @@ function publicReservation(record) {
 
 function requireAdmin(req, res, url) {
   const key = url.searchParams.get("key") || req.headers["x-admin-key"];
-  if (key !== ADMIN_KEY) {
+  if (!ADMIN_KEYS.has(key)) {
     sendJson(res, 401, { error: "Clave de administrador incorrecta." });
     return false;
   }
