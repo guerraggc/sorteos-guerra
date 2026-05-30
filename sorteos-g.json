@@ -7,7 +7,7 @@
   ],
   "sitio": {
     "nombre": "Sorteos Guerra",
-    "lema": "Premios entre amigos",
+    "lema": "APUESTA POCO GANA MUCHO",
     "frasePrincipal": "ARRIESGA POCO Y GANA MUCHO",
     "textoFooter": "Sitio desarrollado para Sorteos Guerra"
   },
@@ -20,7 +20,7 @@
   },
   "sorteo": {
     "estado": "Disponible",
-    "premio": "Premio Principal",
+    "premio": "Premio de 6000 pesos",
     "descripcion": "Cambia este texto por la descripcion del premio actual.",
     "precio": "$100",
     "textoPrecio": "boleto",
@@ -33,13 +33,13 @@
     "maximosPorEnvio": 20
   },
   "contacto": {
-    "whatsappNumero": "520000000000",
-    "whatsappTexto": "(000) 000 0000",
+    "whatsappNumero": "526371116331",
+    "whatsappTexto": "(637) 111 6331",
     "facebookUrl": "https://facebook.com",
-    "telefono": "+520000000000"
+    "telefono": "+526371117331"
   },
   "pago": {
-    "banco": "Banco Guerra",
+    "banco": "Banco banorte",
     "clabe": "000 000 000 000 000 000",
     "titular": "Sorteos Guerra",
     "nota": "Al apartar tus boletos sube la imagen del comprobante. El pago se verifica desde el panel de administracion."
