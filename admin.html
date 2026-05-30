@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sorteos Guerra | Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Navegacion principal">
+        <a class="brand" href="index.html" aria-label="Sorteos Guerra inicio"><span class="brand-logo"><img class="brand-image" src="imagenes/logo-sorteos-guerra.png" alt="Sorteos Guerra"></span></a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navMenu" title="Abrir menu"><i data-lucide="menu"></i></button>
+        <div class="nav-menu" id="navMenu">
+          <a href="index.html">Inicio</a>
+          <a href="sorteo.html">Sorteo</a>
+          <a href="boletos.html">Boletos</a>
+          <a href="verificar.html">Verificar</a>
+          <a href="preguntas.html">Preguntas</a>
+          <a href="pagos.html">Pagos</a>
+          <a href="contacto.html">Contacto</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page-main">
+      <section class="admin single-section" aria-labelledby="adminTitle">
+        <div class="section-band"><h2 id="adminTitle">PANEL DE COMPRADORES</h2></div>
+        <div class="admin-inner">
+          <div class="panel-intro">
+            <h3>Base de datos visual</h3>
+            <p>Aqui revisas compradores, boletos, comprobantes y marcas pagos sin abrir el archivo db.json.</p>
+          </div>
+
+          <form class="admin-login" id="adminLogin">
+            <label for="adminKey">Clave de administrador</label>
+            <div>
+              <input id="adminKey" name="adminKey" type="password" placeholder="Clave admin">
+              <button class="solid-button solid-button--small" type="submit">Entrar</button>
+            </div>
+            <p>Clave inicial local: <strong>guerra2026</strong>. En hosting cambiala con la variable ADMIN_KEY.</p>
+          </form>
+
+          <div class="admin-panel" id="adminPanel" hidden>
+            <div class="admin-stats" id="adminStats">
+              <span><strong>0</strong> Compradores</span>
+              <span><strong>0</strong> En revision</span>
+              <span><strong>0</strong> Pagados</span>
+              <span><strong>0</strong> Pendientes</span>
+              <span><strong>0</strong> Expirados</span>
+            </div>
+
+            <div class="admin-toolbar">
+              <strong id="adminCount">0 compradores</strong>
+              <div class="admin-tools">
+                <input id="adminSearch" type="search" placeholder="Buscar comprador, celular o boleto">
+                <button class="solid-button solid-button--small" id="refreshAdmin" type="button">Actualizar</button>
+              </div>
+            </div>
+            <div class="buyer-list" id="adminRows" aria-label="Compradores registrados"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a href="https://wa.me/520000000000" target="_blank" rel="noreferrer">PREGUNTAS AL WHATSAPP<br>(000) 000 0000</a>
+      <span>Sitio desarrollado para Sorteos Guerra</span>
+      <a href="admin.html">Admin</a>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

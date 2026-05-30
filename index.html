@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Sorteos Guerra - inicio.">
+    <title>Sorteos Guerra | Inicio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <!--
+      GUIA RAPIDA
+      - Cambia imagenes en styles.css, arriba del archivo.
+      - Cambia datos del sorteo en sorteo.html y boletos.html.
+      - Cambia WhatsApp, Facebook, telefono, banco y CLABE donde veas "CAMBIA AQUI".
+    -->
+
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Navegacion principal">
+        <a class="brand" href="index.html" aria-label="Sorteos Guerra inicio">
+          <span class="brand-logo">
+            <img class="brand-image" src="imagenes/logo-sorteos-guerra.png" alt="Sorteos Guerra">
+          </span>
+        </a>
+
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navMenu" title="Abrir menu">
+          <i data-lucide="menu"></i>
+        </button>
+
+        <div class="nav-menu" id="navMenu">
+          <a class="is-active" href="index.html">Inicio</a>
+          <a href="sorteo.html">Sorteo</a>
+          <a href="boletos.html">Boletos</a>
+          <a href="verificar.html">Verificar</a>
+          <a href="preguntas.html">Preguntas</a>
+          <a href="pagos.html">Pagos</a>
+          <a href="contacto.html">Contacto</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero-prizes" aria-labelledby="heroTitle">
+        <article class="prize-slide prize-slide--primary">
+          <div class="image-number image-number--hero">
+            <span>IMAGEN 1</span>
+            <small>Foto principal del sorteo</small>
+          </div>
+          <div class="slide-content">
+            <p class="eyebrow">Premios entre amigos</p>
+            <h1 id="heroTitle">Sorteos Guerra</h1>
+            <a class="stamp-button" href="sorteo.html">-LISTA DE DISPONIBLES-</a>
+          </div>
+        </article>
+
+        <article class="prize-slide prize-slide--secondary">
+          <div class="image-number image-number--hero">
+            <span>IMAGEN 2</span>
+            <small>Segunda foto del premio</small>
+          </div>
+          <div class="slide-content slide-content--compact">
+            <a class="stamp-button" href="boletos.html">-COMPRAR BOLETOS-</a>
+          </div>
+        </article>
+      </section>
+
+      <section class="blue-marquee" aria-label="Resumen">
+        <span>PREMIOS DISPONIBLES</span>
+        <span>BOLETOS LIMITADOS</span>
+        <span>TRANSMISION EN VIVO</span>
+      </section>
+
+      <section class="section-index" aria-label="Secciones">
+        <a href="sorteo.html"><strong>01</strong><span>Sorteo Disponible</span></a>
+        <a href="boletos.html"><strong>02</strong><span>Apartar Boletos</span></a>
+        <a href="verificar.html"><strong>03</strong><span>Verificar Pago</span></a>
+        <a href="preguntas.html"><strong>04</strong><span>Preguntas</span></a>
+        <a href="pagos.html"><strong>05</strong><span>Metodos de Pago</span></a>
+        <a href="admin.html"><strong>06</strong><span>Admin</span></a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a href="https://wa.me/520000000000" target="_blank" rel="noreferrer">PREGUNTAS AL WHATSAPP<br>(000) 000 0000</a>
+      <span>Sitio desarrollado para Sorteos Guerra</span>
+      <a href="admin.html">Admin</a>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

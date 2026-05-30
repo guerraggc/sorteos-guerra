@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sorteos Guerra | Boletos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Navegacion principal">
+        <a class="brand" href="index.html" aria-label="Sorteos Guerra inicio">
+          <span class="brand-logo"><img class="brand-image" src="imagenes/logo-sorteos-guerra.png" alt="Sorteos Guerra"></span>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navMenu" title="Abrir menu"><i data-lucide="menu"></i></button>
+        <div class="nav-menu" id="navMenu">
+          <a href="index.html">Inicio</a>
+          <a href="sorteo.html">Sorteo</a>
+          <a class="is-active" href="boletos.html">Boletos</a>
+          <a href="verificar.html">Verificar</a>
+          <a href="preguntas.html">Preguntas</a>
+          <a href="pagos.html">Pagos</a>
+          <a href="contacto.html">Contacto</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page-main">
+      <section class="tickets-section single-section" aria-labelledby="boletosTitle">
+        <div class="section-band"><h2 id="boletosTitle">APARTA TUS BOLETOS</h2></div>
+        <div class="ticket-layout">
+          <form class="ticket-panel" aria-label="Apartar boletos">
+            <div class="ticket-panel__header">
+              <p>APARTA TUS NUMEROS</p>
+              <strong id="ticketCount">0 seleccionados</strong>
+            </div>
+            <p class="ticket-availability" id="ticketAvailability">Cargando disponibilidad...</p>
+
+            <label for="premio">Premio</label>
+            <select id="premio" name="premio">
+              <option>Premio Principal</option>
+            </select>
+
+            <div class="number-grid" aria-label="Numeros de boleto" data-ticket-start="1" data-ticket-end="99" data-ticket-pad="2">
+              <!--
+                PARA AUMENTAR BOLETOS EN OTRO SORTEO:
+                Cambia data-ticket-end="99" por la cantidad que ocupes.
+                Ejemplo para 500 boletos:
+                data-ticket-start="1" data-ticket-end="500" data-ticket-pad="3"
+                
+                El sistema bloquea automaticamente los boletos ocupados.
+                Si no se marcan como Pagado en 48 horas, vuelven a estar disponibles.
+              -->
+            </div>
+
+            <div class="field-row">
+              <label for="nombre">Nombre</label>
+              <input id="nombre" name="nombre" type="text" placeholder="Nombre completo">
+            </div>
+            <div class="field-row">
+              <label for="apellido">Apellido</label>
+              <input id="apellido" name="apellido" type="text" placeholder="Apellido">
+            </div>
+            <div class="field-row">
+              <label for="estado">Estado</label>
+              <input id="estado" name="estado" type="text" placeholder="Ejemplo: Sonora">
+            </div>
+            <div class="field-row">
+              <label for="whatsapp">Celular / WhatsApp</label>
+              <input id="whatsapp" name="whatsapp" type="tel" placeholder="(000) 000 0000">
+            </div>
+            <div class="field-row">
+              <label for="comprobante">Comprobante de pago</label>
+              <input id="comprobante" name="comprobante" type="file" accept="image/*">
+            </div>
+            <button class="solid-button" type="submit"><i data-lucide="ticket"></i> Apartar boletos</button>
+            <p class="form-note" id="formNote" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a href="https://wa.me/520000000000" target="_blank" rel="noreferrer">PREGUNTAS AL WHATSAPP<br>(000) 000 0000</a>
+      <span>Sitio desarrollado para Sorteos Guerra</span>
+      <a href="admin.html">Admin</a>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

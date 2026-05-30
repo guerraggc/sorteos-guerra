@@ -1,0 +1,21 @@
+Aqui se guarda la base de datos local.
+
+Archivo principal:
+db.json
+
+Que guarda:
+- buyerNumber: numero de comprador, por ejemplo Comprador 1
+- name y lastName: nombre del comprador
+- phone: celular
+- state: estado
+- ticketNumbers: boletos apartados
+- receiptUrl: ruta del comprobante
+- status: en_revision, pendiente, pagado o cancelado
+- heldUntil: fecha limite; si no se marca pagado antes de 48 horas, vuelve a estar disponible
+- status expirado: apartado vencido, el boleto ya puede volver a seleccionarse
+- paidAt: fecha en que se marco como pagado
+
+Los comprobantes se guardan en la carpeta:
+uploads
+
+No borres db.json ni la carpeta uploads si ya tienes compradores reales.

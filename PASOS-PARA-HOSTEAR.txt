@@ -1,0 +1,35 @@
+SORTEOS GUERRA - PASOS PARA HOSTEAR GRATIS
+
+RECOMENDACION:
+Usa Render para la pagina y Supabase para la base de datos/comprobantes.
+
+1. SUPABASE
+- Entra a https://supabase.com
+- Crea un proyecto gratis
+- Abre SQL Editor
+- Copia y ejecuta el archivo supabase-schema.sql
+- Copia Project URL y service_role key
+
+2. GITHUB
+- Crea un repositorio nuevo
+- Sube esta carpeta completa
+- No subas .env, data/db.json ni comprobantes de uploads
+
+3. RENDER
+- Entra a https://render.com
+- New Web Service
+- Conecta GitHub
+- Build Command: npm install
+- Start Command: npm start
+- Agrega variables:
+  ADMIN_KEY=pon-una-clave-nueva
+  SUPABASE_URL=tu Project URL de Supabase
+  SUPABASE_SERVICE_ROLE_KEY=tu service_role key
+  SUPABASE_BUCKET=receipts
+
+4. PROBAR
+- Abre https://tu-app.onrender.com/index.html
+- Abre https://tu-app.onrender.com/admin.html
+- Abre https://tu-app.onrender.com/api/health
+
+Si api/health dice "storage":"supabase", ya quedo conectado.

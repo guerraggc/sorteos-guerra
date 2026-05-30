@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sorteos Guerra | Verificar Pago</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Navegacion principal">
+        <a class="brand" href="index.html" aria-label="Sorteos Guerra inicio">
+          <span class="brand-logo"><img class="brand-image" src="imagenes/logo-sorteos-guerra.png" alt="Sorteos Guerra"></span>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navMenu" title="Abrir menu"><i data-lucide="menu"></i></button>
+        <div class="nav-menu" id="navMenu">
+          <a href="index.html">Inicio</a>
+          <a href="sorteo.html">Sorteo</a>
+          <a href="boletos.html">Boletos</a>
+          <a class="is-active" href="verificar.html">Verificar</a>
+          <a href="preguntas.html">Preguntas</a>
+          <a href="pagos.html">Pagos</a>
+          <a href="contacto.html">Contacto</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page-main">
+      <section class="verify single-section" aria-labelledby="verificarTitle">
+        <div class="section-band"><h2 id="verificarTitle">VERIFICAR PAGO</h2></div>
+        <div class="verify-inner">
+          <h3>Para revisar tu pago busca por numero celular</h3>
+          <form class="verify-form" id="verifyForm">
+            <input id="verifyPhone" name="verifyPhone" type="tel" placeholder="Celular registrado">
+            <button class="solid-button solid-button--small" type="submit">Verificar</button>
+          </form>
+
+          <div class="verify-summary" id="verifySummary">
+            <span>Boletos Pagados: 0</span>
+            <span>En revision: 0</span>
+            <span>No pagados: 0</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="verify-table" aria-label="Boletos apartados">
+              <thead>
+                <tr>
+                  <th>Numero</th>
+                  <th>Oportunidades</th>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Estado</th>
+                  <th>Fecha envio</th>
+                  <th>Fecha apartado</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="verifyRows">
+                <tr><td colspan="8">Busca por celular para ver los boletos apartados.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a href="https://wa.me/520000000000" target="_blank" rel="noreferrer">PREGUNTAS AL WHATSAPP<br>(000) 000 0000</a>
+      <span>Sitio desarrollado para Sorteos Guerra</span>
+      <a href="admin.html">Admin</a>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+CONFIGURACION RAPIDA DEL SORTEO
+
+1. Cambiar cantidad de boletos
+
+Abre:
+boletos.html
+
+Busca:
+<div class="number-grid" aria-label="Numeros de boleto">
+
+Cada boleto es una linea asi:
+<button type="button">014</button>
+
+Para agregar mas boletos, copia una linea y cambia el numero:
+<button type="button">901</button>
+<button type="button">902</button>
+<button type="button">903</button>
+
+El sistema bloquea automaticamente los boletos ocupados.
+
+2. Tiempo para liberar boletos no pagados
+
+Abre:
+server.js
+
+Busca:
+const HOLD_HOURS = 48;
+
+Si quieres que se liberen en 24 horas, cambia 48 por 24.
+Si quieres que se liberen en 72 horas, cambia 48 por 72.
+
+3. Estados del panel
+
+En revision: el comprador subio comprobante y falta revisar.
+Pendiente: falta pago o falta revisar.
+Pagado: boleto confirmado, ya no se libera.
+Cancelado: el boleto vuelve a estar disponible.
+Expirado: pasaron las horas configuradas y el boleto vuelve a estar disponible.

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sorteos Guerra | Sorteo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Navegacion principal">
+        <a class="brand" href="index.html" aria-label="Sorteos Guerra inicio">
+          <span class="brand-logo"><img class="brand-image" src="imagenes/logo-sorteos-guerra.png" alt="Sorteos Guerra"></span>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navMenu" title="Abrir menu"><i data-lucide="menu"></i></button>
+        <div class="nav-menu" id="navMenu">
+          <a href="index.html">Inicio</a>
+          <a class="is-active" href="sorteo.html">Sorteo</a>
+          <a href="boletos.html">Boletos</a>
+          <a href="verificar.html">Verificar</a>
+          <a href="preguntas.html">Preguntas</a>
+          <a href="pagos.html">Pagos</a>
+          <a href="contacto.html">Contacto</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page-main">
+      <section class="available single-section" aria-labelledby="disponibleTitle">
+        <div class="section-band"><h2 id="disponibleTitle">SORTEO DISPONIBLE</h2></div>
+        <div class="prize-layout">
+          <div class="raffle-card">
+            <div class="placeholder-image placeholder-image--three">
+              <span>IMAGEN 3</span>
+              <small>Foto del premio</small>
+            </div>
+            <div class="raffle-card__body">
+              <p class="raffle-card__tag">Disponible</p>
+              <h3>Premio Principal</h3>
+              <p>Cambia este texto por la descripcion del premio actual.</p>
+              <div class="progress" aria-label="68 por ciento vendido">
+                <span style="width: 68%"></span>
+              </div>
+              <div class="raffle-meta">
+                <strong>$100</strong>
+                <span>boleto</span>
+              </div>
+              <a class="solid-button page-action" href="boletos.html"><i data-lucide="ticket"></i> Comprar boletos</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a href="https://wa.me/520000000000" target="_blank" rel="noreferrer">PREGUNTAS AL WHATSAPP<br>(000) 000 0000</a>
+      <span>Sitio desarrollado para Sorteos Guerra</span>
+      <a href="admin.html">Admin</a>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
