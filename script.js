@@ -45,8 +45,149 @@ const safeUrl = (value) => {
   return "";
 };
 
+const normalizeConfigPath = (value) => {
+  return String(value || "").trim().replace(/\\/g, "/");
+};
+
+const cssImageValue = (value) => {
+  const imagePath = normalizeConfigPath(value);
+  if (!imagePath) return "";
+  return `url("${imagePath.replace(/"/g, "%22")}")`;
+};
+
+const setText = (selector, value) => {
+  if (value === undefined || value === null || value === "") return;
+  document.querySelectorAll(selector).forEach((element) => {
+    element.textContent = value;
+  });
+};
+
+const setHrefText = (selector, href, text) => {
+  document.querySelectorAll(selector).forEach((element) => {
+    if (href) element.href = href;
+    if (text) element.textContent = text;
+  });
+};
+
+const loadSiteConfig = async () => {
+  if (window.location.protocol === "file:") return {};
+  try {
+    const response = await fetch(`sorteos-g.json?v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return {};
+    return await response.json();
+  } catch {
+    return {};
+  }
+};
+
+const applyImageConfig = (config) => {
+  const images = config.imagenes || {};
+  const imageEntries = [
+    ["--imagen-1", images.imagen1, ".prize-slide--primary .image-number--hero"],
+    ["--imagen-2", images.imagen2, ".prize-slide--secondary .image-number--hero"],
+    ["--imagen-3", images.imagen3, ".placeholder-image--three"],
+    ["--imagen-4", images.imagen4, ".image-number--about"]
+  ];
+
+  imageEntries.forEach(([variable, imagePath, markerSelector]) => {
+    const cssValue = cssImageValue(imagePath);
+    if (cssValue) {
+      document.documentElement.style.setProperty(variable, cssValue);
+      document.querySelectorAll(markerSelector).forEach((element) => {
+        element.style.display = "none";
+      });
+    }
+  });
+
+  if (images.logo) {
+    document.querySelectorAll(".brand-image, .mini-logo img").forEach((image) => {
+      image.src = normalizeConfigPath(images.logo);
+    });
+  }
+};
+
+const applySiteConfig = (config = {}) => {
+  const site = config.sitio || {};
+  const raffle = config.sorteo || {};
+  const tickets = config.boletos || {};
+  const contact = config.contacto || {};
+  const payment = config.pago || {};
+  const home = config.inicio || {};
+
+  const siteName = site.nombre || "Sorteos Guerra";
+  const currentTitle = document.title.split("|")[1]?.trim();
+  document.title = currentTitle ? `${siteName} | ${currentTitle}` : siteName;
+
+  document.querySelectorAll(".brand").forEach((brand) => {
+    brand.setAttribute("aria-label", `${siteName} inicio`);
+  });
+  document.querySelectorAll(".brand-image, .mini-logo img").forEach((image) => {
+    image.alt = siteName;
+  });
+
+  setText("#heroTitle", siteName);
+  setText(".eyebrow", site.lema);
+  setText(".about-overlay strong", site.frasePrincipal);
+  setText(".site-footer span", site.textoFooter);
+  setText(".social-preview strong", siteName);
+
+  setText(".raffle-card__tag", raffle.estado);
+  setText(".raffle-card__body h3", raffle.premio);
+  setText(".raffle-card__body > p:not(.raffle-card__tag)", raffle.descripcion);
+  setText(".raffle-meta strong", raffle.precio);
+  setText(".raffle-meta span", raffle.textoPrecio);
+  const soldPercent = Number(raffle.porcentajeVendido);
+  if (Number.isFinite(soldPercent)) {
+    document.querySelectorAll(".progress").forEach((element) => {
+      element.setAttribute("aria-label", `${soldPercent} por ciento vendido`);
+    });
+    document.querySelectorAll(".progress span").forEach((element) => {
+      element.style.width = `${Math.max(0, Math.min(100, soldPercent))}%`;
+    });
+  }
+
+  document.querySelectorAll("#premio").forEach((select) => {
+    const prizeName = raffle.premio || "Premio Principal";
+    select.innerHTML = `<option>${escapeHtml(prizeName)}</option>`;
+  });
+
+  if (numberGrid) {
+    if (tickets.inicio) numberGrid.dataset.ticketStart = tickets.inicio;
+    if (tickets.final) numberGrid.dataset.ticketEnd = tickets.final;
+    if (tickets.digitos) numberGrid.dataset.ticketPad = tickets.digitos;
+  }
+
+  const whatsappNumber = String(contact.whatsappNumero || "").replace(/\D/g, "");
+  const whatsappText = contact.whatsappTexto || "";
+  const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "";
+  document.querySelectorAll(".site-footer a[href*='wa.me']").forEach((link) => {
+    if (whatsappHref) link.href = whatsappHref;
+    if (whatsappText) link.innerHTML = `PREGUNTAS AL WHATSAPP<br>${escapeHtml(whatsappText)}`;
+  });
+  setHrefText(".phone-link", whatsappHref, whatsappText ? `WHATSAPP: ${whatsappText}` : "");
+  const socialLinks = document.querySelectorAll(".social-actions a");
+  if (socialLinks[0] && whatsappHref) socialLinks[0].href = whatsappHref;
+  if (socialLinks[1] && contact.facebookUrl) socialLinks[1].href = contact.facebookUrl;
+  if (socialLinks[2] && contact.telefono) socialLinks[2].href = `tel:${contact.telefono}`;
+
+  setText(".payment-grid article p:nth-of-type(1)", payment.banco ? `Banco: ${payment.banco}` : "");
+  setText(".payment-grid article p:nth-of-type(2)", payment.clabe ? `CLABE: ${payment.clabe}` : "");
+  setText(".payment-grid article p:nth-of-type(3)", payment.titular ? `Nombre: ${payment.titular}` : "");
+  setText(".payment-grid article p:nth-of-type(4)", payment.nota);
+
+  setText(".stamp-button[href='sorteo.html']", home.botonDisponibles);
+  setText(".stamp-button[href='boletos.html']", home.botonComprar);
+  const marqueeItems = document.querySelectorAll(".blue-marquee span");
+  if (marqueeItems[0] && home.marquesina1) marqueeItems[0].textContent = home.marquesina1;
+  if (marqueeItems[1] && home.marquesina2) marqueeItems[1].textContent = home.marquesina2;
+  if (marqueeItems[2] && home.marquesina3) marqueeItems[2].textContent = home.marquesina3;
+
+  applyImageConfig(config);
+};
+
 const renderTicketButtons = () => {
   if (!numberGrid) return;
+  numberGrid.querySelectorAll("button").forEach((button) => button.remove());
   const start = Number(numberGrid.dataset.ticketStart || 1);
   const end = Number(numberGrid.dataset.ticketEnd || 99);
   const pad = Number(numberGrid.dataset.ticketPad || String(end).length);
@@ -59,9 +200,8 @@ const renderTicketButtons = () => {
 
   numberGrid.insertAdjacentHTML("beforeend", buttons.join(""));
   ticketButtons = [...numberGrid.querySelectorAll("button")];
+  bindTicketButtons();
 };
-
-renderTicketButtons();
 
 const showServerRequiredMessage = () => {
   if (window.location.protocol !== "file:") return false;
@@ -104,8 +244,19 @@ const selectedTickets = () => {
 };
 
 const updateTicketCount = () => {
+  if (!ticketCount) return;
   const selected = selectedTickets().length;
   ticketCount.textContent = `${selected} seleccionado${selected === 1 ? "" : "s"}`;
+};
+
+const bindTicketButtons = () => {
+  ticketButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.disabled) return;
+      button.classList.toggle("is-selected");
+      updateTicketCount();
+    });
+  });
 };
 
 const fileToDataUrl = (file) => {
@@ -192,15 +343,6 @@ const loadTicketAvailability = async () => {
     }
   }
 };
-
-// Seleccion de boletos. Los numeros se cambian en boletos.html, dentro de .number-grid.
-ticketButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    if (button.disabled) return;
-    button.classList.toggle("is-selected");
-    updateTicketCount();
-  });
-});
 
 const renderVerify = (records) => {
   const rows = records.flatMap((record) => {
@@ -442,17 +584,26 @@ adminRows?.addEventListener("click", async (event) => {
 });
 
 const phoneFromUrl = new URLSearchParams(window.location.search).get("phone");
-if (verifyPhone && phoneFromUrl) {
-  verifyPhone.value = phoneFromUrl;
-  loadVerification(phoneFromUrl).catch((error) => {
-    verifyRows.innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
-  });
-}
 
-loadTicketAvailability();
+const initializePage = async () => {
+  const config = await loadSiteConfig();
+  applySiteConfig(config);
+  renderTicketButtons();
 
-if (adminPanel && adminKey) {
-  loadAdmin().catch(() => {
-    adminPanel.hidden = true;
-  });
-}
+  if (verifyPhone && phoneFromUrl) {
+    verifyPhone.value = phoneFromUrl;
+    loadVerification(phoneFromUrl).catch((error) => {
+      verifyRows.innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
+    });
+  }
+
+  loadTicketAvailability();
+
+  if (adminPanel && adminKey) {
+    loadAdmin().catch(() => {
+      adminPanel.hidden = true;
+    });
+  }
+};
+
+initializePage();

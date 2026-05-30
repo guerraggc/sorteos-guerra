@@ -7,16 +7,17 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(ROOT, "uploads");
 const DB_FILE = path.join(DATA_DIR, "db.json");
+const CONFIG_FILE = path.join(ROOT, "sorteos-g.json");
 const IS_HOSTED = Boolean(process.env.PORT || process.env.RENDER || process.env.RENDER_SERVICE_ID);
 const ADMIN_KEY = String(process.env.ADMIN_KEY || (IS_HOSTED ? "" : "guerra2026")).trim();
 const HOLD_HOURS = 48;
 const HOLD_MS = HOLD_HOURS * 60 * 60 * 1000;
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
-const MAX_TICKETS_PER_RESERVATION = 20;
-const TICKET_START = Number.parseInt(process.env.TICKET_START || "1", 10);
-const TICKET_END = Number.parseInt(process.env.TICKET_END || "99", 10);
-const TICKET_PAD = Number.parseInt(process.env.TICKET_PAD || String(TICKET_END).length, 10);
+const DEFAULT_MAX_TICKETS_PER_RESERVATION = 20;
+const DEFAULT_TICKET_START = Number.parseInt(process.env.TICKET_START || "1", 10);
+const DEFAULT_TICKET_END = Number.parseInt(process.env.TICKET_END || "99", 10);
+const DEFAULT_TICKET_PAD = Number.parseInt(process.env.TICKET_PAD || String(DEFAULT_TICKET_END).length, 10);
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -47,6 +48,7 @@ const PUBLIC_ROOT_FILES = new Set([
   "pagos.html",
   "contacto.html",
   "admin.html",
+  "sorteos-g.json",
   "styles.css",
   "script.js",
   "favicon.ico"
@@ -203,12 +205,36 @@ function cleanFileName(value, fallback) {
   return baseName.replace(/[^\w.\- ]+/g, "").trim().slice(0, 120) || fallback;
 }
 
-function normalizeTicket(value) {
+function readSiteConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function cleanPositiveInteger(value, fallback) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function getTicketSettings() {
+  const config = readSiteConfig();
+  const tickets = config.boletos || {};
+  const start = cleanPositiveInteger(tickets.inicio, DEFAULT_TICKET_START);
+  const end = Math.max(start, cleanPositiveInteger(tickets.final, DEFAULT_TICKET_END));
+  const pad = cleanPositiveInteger(tickets.digitos, DEFAULT_TICKET_PAD || String(end).length);
+  const maxPerReservation = cleanPositiveInteger(tickets.maximosPorEnvio, DEFAULT_MAX_TICKETS_PER_RESERVATION);
+
+  return { start, end, pad, maxPerReservation };
+}
+
+function normalizeTicket(value, settings = getTicketSettings()) {
   const ticket = String(value || "").trim();
   if (!/^\d+$/.test(ticket)) return "";
   const number = Number(ticket);
-  if (!Number.isInteger(number) || number < TICKET_START || number > TICKET_END) return "";
-  return String(number).padStart(TICKET_PAD, "0");
+  if (!Number.isInteger(number) || number < settings.start || number > settings.end) return "";
+  return String(number).padStart(settings.pad, "0");
 }
 
 function publicReservation(record, options = {}) {
@@ -507,6 +533,7 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/tickets") {
+    const ticketSettings = getTicketSettings();
     const store = await loadStore();
     const changed = expireOldReservations(store.reservations);
     await persistExpiredReservations(store, changed);
@@ -519,7 +546,7 @@ async function handleApi(req, res, url) {
         heldUntil: record.heldUntil || null
       }));
     });
-    sendJson(res, 200, { holdHours: HOLD_HOURS, unavailableTickets });
+    sendJson(res, 200, { holdHours: HOLD_HOURS, tickets: ticketSettings, unavailableTickets });
     return true;
   }
 
@@ -538,10 +565,11 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/reservations") {
     try {
       const body = JSON.parse(await readBody(req));
+      const ticketSettings = getTicketSettings();
       const rawTicketNumbers = Array.isArray(body.ticketNumbers)
         ? body.ticketNumbers.map((ticket) => String(ticket).trim()).filter(Boolean)
         : [];
-      const ticketNumbers = rawTicketNumbers.map(normalizeTicket).filter(Boolean);
+      const ticketNumbers = rawTicketNumbers.map((ticket) => normalizeTicket(ticket, ticketSettings)).filter(Boolean);
       const phone = cleanPhone(body.phone);
       const name = cleanText(body.name, 60);
       const lastName = cleanText(body.lastName, 60);
@@ -551,7 +579,7 @@ async function handleApi(req, res, url) {
       if (!ticketNumbers.length) throw new Error("Selecciona al menos un boleto.");
       if (ticketNumbers.length !== rawTicketNumbers.length) throw new Error("Hay boletos no validos en la seleccion.");
       if (new Set(ticketNumbers).size !== ticketNumbers.length) throw new Error("Hay boletos repetidos en la seleccion.");
-      if (ticketNumbers.length > MAX_TICKETS_PER_RESERVATION) throw new Error(`Solo puedes apartar hasta ${MAX_TICKETS_PER_RESERVATION} boletos por envio.`);
+      if (ticketNumbers.length > ticketSettings.maxPerReservation) throw new Error(`Solo puedes apartar hasta ${ticketSettings.maxPerReservation} boletos por envio.`);
       if (!name || !lastName || !state || !phone) {
         throw new Error("Faltan datos del cliente.");
       }
@@ -682,7 +710,7 @@ function serveStatic(req, res, url) {
       res.end("No encontrado");
       return;
     }
-    const cacheControl = ext === ".html" || ext === ".js" || ext === ".css"
+    const cacheControl = ext === ".html" || ext === ".js" || ext === ".css" || ext === ".json"
       ? "no-store"
       : "public, max-age=86400";
     res.writeHead(200, {

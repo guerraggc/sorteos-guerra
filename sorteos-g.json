@@ -1,0 +1,54 @@
+{
+  "_instrucciones": [
+    "Este es el archivo principal para cambiar el sorteo.",
+    "Cambia solo lo que esta despues de los dos puntos.",
+    "Para imagenes, pon tus fotos dentro de la carpeta imagenes y escribe rutas como imagenes/mi-foto.jpg.",
+    "Si dejas una imagen vacia, la pagina muestra el cuadro azul con numero de imagen."
+  ],
+  "sitio": {
+    "nombre": "Sorteos Guerra",
+    "lema": "Premios entre amigos",
+    "frasePrincipal": "ARRIESGA POCO Y GANA MUCHO",
+    "textoFooter": "Sitio desarrollado para Sorteos Guerra"
+  },
+  "imagenes": {
+    "logo": "imagenes/logo-sorteos-guerra.png",
+    "imagen1": "",
+    "imagen2": "",
+    "imagen3": "",
+    "imagen4": ""
+  },
+  "sorteo": {
+    "estado": "Disponible",
+    "premio": "Premio Principal",
+    "descripcion": "Cambia este texto por la descripcion del premio actual.",
+    "precio": "$100",
+    "textoPrecio": "boleto",
+    "porcentajeVendido": 68
+  },
+  "boletos": {
+    "inicio": 1,
+    "final": 99,
+    "digitos": 2,
+    "maximosPorEnvio": 20
+  },
+  "contacto": {
+    "whatsappNumero": "520000000000",
+    "whatsappTexto": "(000) 000 0000",
+    "facebookUrl": "https://facebook.com",
+    "telefono": "+520000000000"
+  },
+  "pago": {
+    "banco": "Banco Guerra",
+    "clabe": "000 000 000 000 000 000",
+    "titular": "Sorteos Guerra",
+    "nota": "Al apartar tus boletos sube la imagen del comprobante. El pago se verifica desde el panel de administracion."
+  },
+  "inicio": {
+    "botonDisponibles": "-LISTA DE DISPONIBLES-",
+    "botonComprar": "-COMPRAR BOLETOS-",
+    "marquesina1": "PREMIOS DISPONIBLES",
+    "marquesina2": "BOLETOS LIMITADOS",
+    "marquesina3": "TRANSMISION EN VIVO"
+  }
+}
