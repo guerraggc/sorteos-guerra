@@ -7,10 +7,16 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(ROOT, "uploads");
 const DB_FILE = path.join(DATA_DIR, "db.json");
-const ADMIN_KEY = process.env.ADMIN_KEY || "guerra2026";
-const ADMIN_KEYS = new Set([ADMIN_KEY, "guerra2026"].filter(Boolean));
+const IS_HOSTED = Boolean(process.env.PORT || process.env.RENDER || process.env.RENDER_SERVICE_ID);
+const ADMIN_KEY = String(process.env.ADMIN_KEY || (IS_HOSTED ? "" : "guerra2026")).trim();
 const HOLD_HOURS = 48;
 const HOLD_MS = HOLD_HOURS * 60 * 60 * 1000;
+const MAX_BODY_BYTES = 12 * 1024 * 1024;
+const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
+const MAX_TICKETS_PER_RESERVATION = 20;
+const TICKET_START = Number.parseInt(process.env.TICKET_START || "1", 10);
+const TICKET_END = Number.parseInt(process.env.TICKET_END || "99", 10);
+const TICKET_PAD = Number.parseInt(process.env.TICKET_PAD || String(TICKET_END).length, 10);
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -27,10 +33,27 @@ const MIME_TYPES = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".gif": "image/gif",
-  ".txt": "text/plain; charset=utf-8"
+  ".ico": "image/x-icon",
+  ".svg": "image/svg+xml"
 };
 
 const STATUS = new Set(["en_revision", "pendiente", "pagado", "cancelado", "expirado"]);
+const PUBLIC_ROOT_FILES = new Set([
+  "index.html",
+  "sorteo.html",
+  "boletos.html",
+  "verificar.html",
+  "preguntas.html",
+  "pagos.html",
+  "contacto.html",
+  "admin.html",
+  "styles.css",
+  "script.js",
+  "favicon.ico"
+]);
+const PUBLIC_IMAGE_DIRS = new Set(["imagenes", "uploads"]);
+const PUBLIC_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg"]);
+const RATE_LIMITS = new Map();
 
 function ensureStorage() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -107,23 +130,59 @@ function writeDb(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
+function setSecurityHeaders(res) {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'"
+  ].join("; ");
+
+  res.setHeader("Content-Security-Policy", csp);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  if (IS_HOSTED) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+}
+
 function sendJson(res, statusCode, data) {
+  setSecurityHeaders(res);
+  res.setHeader("Cache-Control", "no-store");
   res.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(data));
 }
 
-function readBody(req) {
+function readBody(req, limit = MAX_BODY_BYTES) {
   return new Promise((resolve, reject) => {
-    let body = "";
+    const chunks = [];
+    let bytes = 0;
+    let done = false;
     req.on("data", (chunk) => {
-      body += chunk;
-      if (body.length > 12 * 1024 * 1024) {
+      if (done) return;
+      bytes += chunk.length;
+      if (bytes > limit) {
+        done = true;
         reject(new Error("El comprobante esta muy pesado. Usa una imagen menor a 12 MB."));
         req.destroy();
+        return;
       }
+      chunks.push(chunk);
     });
-    req.on("end", () => resolve(body));
-    req.on("error", reject);
+    req.on("end", () => {
+      if (!done) resolve(Buffer.concat(chunks).toString("utf8"));
+    });
+    req.on("error", (error) => {
+      if (!done) reject(error);
+    });
   });
 }
 
@@ -131,8 +190,29 @@ function cleanPhone(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
-function publicReservation(record) {
-  return {
+function cleanText(value, maxLength = 80) {
+  return String(value || "")
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function cleanFileName(value, fallback) {
+  const baseName = path.basename(String(value || ""));
+  return baseName.replace(/[^\w.\- ]+/g, "").trim().slice(0, 120) || fallback;
+}
+
+function normalizeTicket(value) {
+  const ticket = String(value || "").trim();
+  if (!/^\d+$/.test(ticket)) return "";
+  const number = Number(ticket);
+  if (!Number.isInteger(number) || number < TICKET_START || number > TICKET_END) return "";
+  return String(number).padStart(TICKET_PAD, "0");
+}
+
+function publicReservation(record, options = {}) {
+  const reservation = {
     id: record.id,
     buyerNumber: record.buyerNumber,
     prize: record.prize,
@@ -142,19 +222,33 @@ function publicReservation(record) {
     state: record.state,
     phone: record.phone,
     status: record.status,
-    receiptUrl: record.receiptUrl,
-    receiptName: record.receiptName,
     createdAt: record.createdAt,
     sentAt: record.sentAt,
     paidAt: record.paidAt || null,
     statusUpdatedAt: record.statusUpdatedAt || null,
     heldUntil: record.heldUntil || null
   };
+  if (options.includeReceipt) {
+    reservation.receiptUrl = record.receiptUrl;
+    reservation.receiptName = record.receiptName;
+  }
+  return reservation;
 }
 
 function requireAdmin(req, res, url) {
-  const key = url.searchParams.get("key") || req.headers["x-admin-key"];
-  if (!ADMIN_KEYS.has(key)) {
+  const headerKey = Array.isArray(req.headers["x-admin-key"]) ? req.headers["x-admin-key"][0] : req.headers["x-admin-key"];
+  const key = headerKey || (!IS_HOSTED ? url.searchParams.get("key") : "");
+
+  if (!ADMIN_KEY) {
+    sendJson(res, 503, { error: "Falta configurar ADMIN_KEY en el hosting." });
+    return false;
+  }
+
+  const incoming = Buffer.from(String(key || ""));
+  const expected = Buffer.from(ADMIN_KEY);
+  const matches = incoming.length === expected.length && crypto.timingSafeEqual(incoming, expected);
+
+  if (!matches) {
     sendJson(res, 401, { error: "Clave de administrador incorrecta." });
     return false;
   }
@@ -280,13 +374,38 @@ async function updateSupabaseReservation(id, patch) {
   return rows && rows[0] ? rowToReservation(rows[0]) : null;
 }
 
+function detectImageMime(buffer) {
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return "image/png";
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP") {
+    return "image/webp";
+  }
+  if (buffer.length >= 6) {
+    const header = buffer.subarray(0, 6).toString("ascii");
+    if (header === "GIF87a" || header === "GIF89a") return "image/gif";
+  }
+  return "";
+}
+
 function parseReceipt(dataUrl, originalName) {
-  const match = String(dataUrl || "").match(/^data:(image\/png|image\/jpeg|image\/webp|image\/gif);base64,(.+)$/);
+  const match = String(dataUrl || "").match(/^data:(image\/png|image\/jpeg|image\/webp|image\/gif);base64,([A-Za-z0-9+/=\s]+)$/);
   if (!match) {
     throw new Error("El comprobante debe ser una imagen PNG, JPG, WEBP o GIF.");
   }
 
   const mime = match[1];
+  const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
+  if (!buffer.length || buffer.length > MAX_RECEIPT_BYTES) {
+    throw new Error("El comprobante esta muy pesado. Usa una imagen menor a 8 MB.");
+  }
+  if (detectImageMime(buffer) !== mime) {
+    throw new Error("El comprobante no parece ser una imagen valida.");
+  }
+
   const ext = {
     "image/png": ".png",
     "image/jpeg": ".jpg",
@@ -295,10 +414,10 @@ function parseReceipt(dataUrl, originalName) {
   }[mime];
   const fileName = `comprobante-${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ext}`;
   return {
-    buffer: Buffer.from(match[2], "base64"),
+    buffer,
     fileName,
     mime,
-    receiptName: originalName || fileName
+    receiptName: cleanFileName(originalName, fileName)
   };
 }
 
@@ -327,11 +446,62 @@ async function saveReceipt(dataUrl, originalName) {
   };
 }
 
+function getClientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwarded || req.socket.remoteAddress || "unknown";
+}
+
+function rateLimit(req, res, name, limit, windowMs) {
+  const now = Date.now();
+  const key = `${name}:${getClientIp(req)}`;
+  const current = RATE_LIMITS.get(key);
+  if (!current || current.resetAt <= now) {
+    RATE_LIMITS.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  current.count += 1;
+  if (current.count > limit) {
+    res.setHeader("Retry-After", String(Math.ceil((current.resetAt - now) / 1000)));
+    sendJson(res, 429, { error: "Demasiados intentos. Intenta otra vez en unos minutos." });
+    return false;
+  }
+  return true;
+}
+
+function hasTrustedOrigin(req) {
+  if (req.method !== "POST" && req.method !== "PATCH" && req.method !== "DELETE") return true;
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  try {
+    const originUrl = new URL(origin);
+    return originUrl.host === req.headers.host;
+  } catch {
+    return false;
+  }
+}
+
 async function handleApi(req, res, url) {
+  if (!hasTrustedOrigin(req)) {
+    sendJson(res, 403, { error: "Origen no permitido." });
+    return true;
+  }
+
+  if (url.pathname.startsWith("/api/admin/") && !rateLimit(req, res, "admin", 80, 15 * 60 * 1000)) {
+    return true;
+  }
+  if (req.method === "POST" && url.pathname === "/api/reservations" && !rateLimit(req, res, "reservations-create", 12, 60 * 60 * 1000)) {
+    return true;
+  }
+  if (req.method === "GET" && url.pathname === "/api/reservations" && !rateLimit(req, res, "reservations-check", 120, 15 * 60 * 1000)) {
+    return true;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/health") {
     sendJson(res, 200, {
       ok: true,
-      storage: USE_SUPABASE ? "supabase" : "local"
+      storage: USE_SUPABASE ? "supabase" : "local",
+      adminConfigured: Boolean(ADMIN_KEY)
     });
     return true;
   }
@@ -368,15 +538,24 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/reservations") {
     try {
       const body = JSON.parse(await readBody(req));
-      const ticketNumbers = Array.isArray(body.ticketNumbers)
+      const rawTicketNumbers = Array.isArray(body.ticketNumbers)
         ? body.ticketNumbers.map((ticket) => String(ticket).trim()).filter(Boolean)
         : [];
+      const ticketNumbers = rawTicketNumbers.map(normalizeTicket).filter(Boolean);
       const phone = cleanPhone(body.phone);
+      const name = cleanText(body.name, 60);
+      const lastName = cleanText(body.lastName, 60);
+      const state = cleanText(body.state, 60);
+      const prize = cleanText(body.prize || "Premio Principal", 80) || "Premio Principal";
 
       if (!ticketNumbers.length) throw new Error("Selecciona al menos un boleto.");
-      if (!body.name || !body.lastName || !body.state || !phone) {
+      if (ticketNumbers.length !== rawTicketNumbers.length) throw new Error("Hay boletos no validos en la seleccion.");
+      if (new Set(ticketNumbers).size !== ticketNumbers.length) throw new Error("Hay boletos repetidos en la seleccion.");
+      if (ticketNumbers.length > MAX_TICKETS_PER_RESERVATION) throw new Error(`Solo puedes apartar hasta ${MAX_TICKETS_PER_RESERVATION} boletos por envio.`);
+      if (!name || !lastName || !state || !phone) {
         throw new Error("Faltan datos del cliente.");
       }
+      if (phone.length < 10 || phone.length > 15) throw new Error("El celular debe tener entre 10 y 15 digitos.");
 
       const store = await loadStore();
       const changed = expireOldReservations(store.reservations);
@@ -394,11 +573,11 @@ async function handleApi(req, res, url) {
       const reservation = {
         id: crypto.randomUUID(),
         buyerNumber: USE_SUPABASE ? null : store.db.meta.nextBuyerNumber,
-        prize: String(body.prize || "Premio Principal").trim(),
+        prize,
         ticketNumbers,
-        name: String(body.name).trim(),
-        lastName: String(body.lastName).trim(),
-        state: String(body.state).trim(),
+        name,
+        lastName,
+        state,
         phone,
         status: "en_revision",
         receiptUrl: receipt.receiptUrl,
@@ -428,7 +607,7 @@ async function handleApi(req, res, url) {
     const store = await loadStore();
     const changed = expireOldReservations(store.reservations);
     await persistExpiredReservations(store, changed);
-    sendJson(res, 200, { reservations: store.reservations.map(publicReservation) });
+    sendJson(res, 200, { reservations: store.reservations.map((record) => publicReservation(record, { includeReceipt: true })) });
     return true;
   }
 
@@ -455,7 +634,7 @@ async function handleApi(req, res, url) {
         ? await updateSupabaseReservation(reservation.id, reservation)
         : reservation;
       if (!USE_SUPABASE) writeDb(store.db);
-      sendJson(res, 200, { reservation: publicReservation(savedReservation || reservation) });
+      sendJson(res, 200, { reservation: publicReservation(savedReservation || reservation, { includeReceipt: true }) });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
     }
@@ -466,11 +645,34 @@ async function handleApi(req, res, url) {
 }
 
 function serveStatic(req, res, url) {
-  const requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
-  const target = path.normalize(path.join(ROOT, requestedPath));
-  if (!target.startsWith(ROOT)) {
-    res.writeHead(403);
-    res.end("Forbidden");
+  setSecurityHeaders(res);
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.writeHead(405, { "Content-Type": "text/plain; charset=utf-8", Allow: "GET, HEAD" });
+    res.end("Metodo no permitido");
+    return;
+  }
+
+  let requestedPath;
+  try {
+    requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  } catch {
+    res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("Ruta no valida");
+    return;
+  }
+
+  const target = path.resolve(ROOT, `.${requestedPath}`);
+  const relative = path.relative(ROOT, target);
+  const parts = relative.split(path.sep).filter(Boolean);
+  const ext = path.extname(target).toLowerCase();
+  const isRootFile = parts.length === 1 && PUBLIC_ROOT_FILES.has(parts[0]);
+  const isPublicImage = parts.length >= 2 && PUBLIC_IMAGE_DIRS.has(parts[0]) && PUBLIC_IMAGE_EXTENSIONS.has(ext);
+  const isInsideRoot = relative && !relative.startsWith("..") && !path.isAbsolute(relative);
+
+  if (!isInsideRoot || (!isRootFile && !isPublicImage)) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("No encontrado");
     return;
   }
 
@@ -480,8 +682,17 @@ function serveStatic(req, res, url) {
       res.end("No encontrado");
       return;
     }
-    const ext = path.extname(target).toLowerCase();
-    res.writeHead(200, { "Content-Type": MIME_TYPES[ext] || "application/octet-stream" });
+    const cacheControl = ext === ".html" || ext === ".js" || ext === ".css"
+      ? "no-store"
+      : "public, max-age=86400";
+    res.writeHead(200, {
+      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
+      "Cache-Control": cacheControl
+    });
+    if (req.method === "HEAD") {
+      res.end();
+      return;
+    }
     res.end(data);
   });
 }
@@ -499,9 +710,13 @@ function startServer(port = process.env.PORT || 56684) {
       }
       serveStatic(req, res, url);
     } catch (error) {
-      sendJson(res, 500, { error: error.message });
+      console.error(error);
+      sendJson(res, 500, { error: "Error interno del servidor." });
     }
   });
+  server.headersTimeout = 15000;
+  server.requestTimeout = 20000;
+  server.maxHeadersCount = 80;
 
   server.listen(port, host, () => {
     const address = server.address();

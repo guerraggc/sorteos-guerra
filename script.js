@@ -20,6 +20,31 @@ const adminStats = document.querySelector("#adminStats");
 let adminKey = sessionStorage.getItem("sorteosAdminKey") || "";
 let adminRecords = [];
 
+const escapeHtml = (value) => {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+};
+
+const safeStatus = (status) => {
+  const allowed = ["pagado", "en_revision", "pendiente", "cancelado", "expirado"];
+  return allowed.includes(status) ? status : "pendiente";
+};
+
+const safeUrl = (value) => {
+  try {
+    const url = new URL(String(value || ""), window.location.origin);
+    if (url.origin === window.location.origin || url.protocol === "https:") return url.href;
+  } catch {
+    return "";
+  }
+  return "";
+};
+
 const renderTicketButtons = () => {
   if (!numberGrid) return;
   const start = Number(numberGrid.dataset.ticketStart || 1);
@@ -120,8 +145,8 @@ const api = async (url, options = {}) => {
   }
 
   const response = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) }
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -201,14 +226,14 @@ const renderVerify = (records) => {
 
   verifyRows.innerHTML = rows.map((row) => `
     <tr>
-      <td class="ticket-cell">${row.ticket}</td>
-      <td>${row.ticketNumbers.join(", ")}</td>
-      <td>${row.name}</td>
-      <td>${row.lastName}</td>
-      <td>${row.state}</td>
+      <td class="ticket-cell">${escapeHtml(row.ticket)}</td>
+      <td>${(Array.isArray(row.ticketNumbers) ? row.ticketNumbers : []).map(escapeHtml).join(", ")}</td>
+      <td>${escapeHtml(row.name)}</td>
+      <td>${escapeHtml(row.lastName)}</td>
+      <td>${escapeHtml(row.state)}</td>
       <td>${formatDate(row.sentAt)}</td>
       <td>${formatDate(row.createdAt)}</td>
-      <td class="status-cell status-${row.status}">${statusLabel(row.status)}</td>
+      <td class="status-cell status-${safeStatus(row.status)}">${statusLabel(safeStatus(row.status))}</td>
     </tr>
   `).join("");
 };
@@ -277,7 +302,7 @@ verifyForm?.addEventListener("submit", async (event) => {
   try {
     await loadVerification(verifyPhone.value);
   } catch (error) {
-    verifyRows.innerHTML = `<tr><td colspan="8">${error.message}</td></tr>`;
+    verifyRows.innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
   }
 });
 
@@ -323,44 +348,56 @@ const renderAdmin = (records) => {
     return;
   }
 
-  adminRows.innerHTML = records.map((record, index) => `
-    <article class="buyer-card status-border-${record.status}">
+  adminRows.innerHTML = records.map((record, index) => {
+    const status = safeStatus(record.status);
+    const buyerNumber = escapeHtml(record.buyerNumber || index + 1);
+    const tickets = (Array.isArray(record.ticketNumbers) ? record.ticketNumbers : []).map(escapeHtml).join(", ");
+    const receiptUrl = safeUrl(record.receiptUrl);
+    const receiptPreview = receiptUrl
+      ? `<a class="receipt-preview" href="${escapeHtml(receiptUrl)}" target="_blank" rel="noreferrer">
+          <img src="${escapeHtml(receiptUrl)}" alt="Comprobante de pago del comprador ${buyerNumber}">
+          <span>Ver comprobante completo</span>
+        </a>`
+      : `<div class="receipt-preview"><span>Sin comprobante disponible</span></div>`;
+
+    return `
+    <article class="buyer-card status-border-${status}">
       <header class="buyer-card__header">
         <div>
-          <span>Comprador ${record.buyerNumber || index + 1}</span>
-          <strong>${record.name} ${record.lastName}</strong>
+          <span>Comprador ${buyerNumber}</span>
+          <strong>${escapeHtml(record.name)} ${escapeHtml(record.lastName)}</strong>
         </div>
-        <em class="status-pill status-${record.status}">${statusLabel(record.status)}</em>
+        <em class="status-pill status-${status}">${statusLabel(status)}</em>
       </header>
 
       <div class="buyer-card__body">
         <div class="buyer-details">
-          <p><strong>Boletos:</strong> ${record.ticketNumbers.join(", ")}</p>
-          <p><strong>Celular:</strong> ${record.phone}</p>
-          <p><strong>Estado:</strong> ${record.state}</p>
-          <p><strong>Premio:</strong> ${record.prize}</p>
+          <p><strong>Boletos:</strong> ${tickets}</p>
+          <p><strong>Celular:</strong> ${escapeHtml(record.phone)}</p>
+          <p><strong>Estado:</strong> ${escapeHtml(record.state)}</p>
+          <p><strong>Premio:</strong> ${escapeHtml(record.prize)}</p>
           <p><strong>Apartado:</strong> ${formatDate(record.createdAt)}</p>
           <p><strong>Actualizado:</strong> ${formatDate(record.statusUpdatedAt)}</p>
         </div>
 
-        <a class="receipt-preview" href="${record.receiptUrl}" target="_blank" rel="noreferrer">
-          <img src="${record.receiptUrl}" alt="Comprobante de pago del comprador ${record.buyerNumber || index + 1}">
-          <span>Ver comprobante completo</span>
-        </a>
+        ${receiptPreview}
       </div>
 
       <div class="buyer-actions">
-        <button class="status-action status-action--paid" type="button" data-id="${record.id}" data-status="pagado">Pagado</button>
-        <button class="status-action" type="button" data-id="${record.id}" data-status="en_revision">En revision</button>
-        <button class="status-action" type="button" data-id="${record.id}" data-status="pendiente">Pendiente</button>
-        <button class="status-action status-action--cancel" type="button" data-id="${record.id}" data-status="cancelado">Cancelar</button>
+        <button class="status-action status-action--paid" type="button" data-id="${escapeHtml(record.id)}" data-status="pagado">Pagado</button>
+        <button class="status-action" type="button" data-id="${escapeHtml(record.id)}" data-status="en_revision">En revision</button>
+        <button class="status-action" type="button" data-id="${escapeHtml(record.id)}" data-status="pendiente">Pendiente</button>
+        <button class="status-action status-action--cancel" type="button" data-id="${escapeHtml(record.id)}" data-status="cancelado">Cancelar</button>
       </div>
     </article>
-  `).join("");
+  `;
+  }).join("");
 };
 
 const loadAdmin = async () => {
-  const data = await api(`/api/admin/reservations?key=${encodeURIComponent(adminKey)}`);
+  const data = await api("/api/admin/reservations", {
+    headers: { "X-Admin-Key": adminKey }
+  });
   adminPanel.hidden = false;
   adminRecords = data.reservations;
   renderAdminStats(adminRecords);
@@ -393,8 +430,9 @@ adminRows?.addEventListener("click", async (event) => {
   const id = event.target.dataset.id;
   const newStatus = event.target.dataset.status;
   try {
-    await api(`/api/admin/reservations/${id}/status?key=${encodeURIComponent(adminKey)}`, {
+    await api(`/api/admin/reservations/${encodeURIComponent(id)}/status`, {
       method: "PATCH",
+      headers: { "X-Admin-Key": adminKey },
       body: JSON.stringify({ status: newStatus })
     });
     await loadAdmin();
@@ -407,7 +445,7 @@ const phoneFromUrl = new URLSearchParams(window.location.search).get("phone");
 if (verifyPhone && phoneFromUrl) {
   verifyPhone.value = phoneFromUrl;
   loadVerification(phoneFromUrl).catch((error) => {
-    verifyRows.innerHTML = `<tr><td colspan="8">${error.message}</td></tr>`;
+    verifyRows.innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
   });
 }
 
