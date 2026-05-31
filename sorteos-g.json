@@ -13,15 +13,15 @@
   },
   "imagenes": {
     "logo": "imagenes/logo-sorteos-guerra.png",
-    "imagen1": "",
+    "imagen1": "imagenes/premio-6000.svg",
     "imagen2": "",
-    "imagen3": "",
+    "imagen3": "imagenes/premio-6000.svg",
     "imagen4": ""
   },
   "sorteo": {
     "estado": "Disponible",
     "premio": "Premio de 6000 pesos",
-    "descripcion": "Cambia este texto por la descripcion del premio actual.",
+    "descripcion": "Primer sorteo de $6,000 pesos. La rifa se realiza cuando se vendan todos los boletos y el ganador se tomara de los ultimos 2 digitos del Premio Mayor de Loteria Nacional.",
     "precio": "$100",
     "textoPrecio": "boleto",
     "porcentajeVendido": 68

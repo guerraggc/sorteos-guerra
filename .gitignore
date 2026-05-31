@@ -5,5 +5,8 @@ uploads/*
 !uploads/.gitkeep
 promo-sorteo.html
 promo-runner.js
+promo-celular.html
+promo-celular.js
 guion-video-promocion.txt
+video-assets/
 *.webm
