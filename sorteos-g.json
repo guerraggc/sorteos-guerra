@@ -20,7 +20,7 @@
   },
   "sorteo": {
     "estado": "Disponible",
-    "premio": "Premio de 6000 pesos",
+    "premio": "Premio de 600 pesos",
     "descripcion": "Cambia este texto por la descripcion del premio actual.",
     "precio": "$100",
     "textoPrecio": "boleto",
