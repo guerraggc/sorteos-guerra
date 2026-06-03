@@ -1059,6 +1059,14 @@ h1 {
   color: var(--blue-deep);
 }
 
+.buyer-payment {
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #e8f7ff;
+  border: 2px solid rgba(25, 152, 204, 0.3);
+}
+
 .receipt-preview {
   display: grid;
   gap: 10px;

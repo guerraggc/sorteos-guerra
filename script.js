@@ -19,6 +19,7 @@ const adminStats = document.querySelector("#adminStats");
 
 let adminKey = sessionStorage.getItem("sorteosAdminKey") || "";
 let adminRecords = [];
+let siteConfig = {};
 
 const escapeHtml = (value) => {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -67,6 +68,47 @@ const setHrefText = (selector, href, text) => {
     if (href) element.href = href;
     if (text) element.textContent = text;
   });
+};
+
+const parseMoneyAmount = (value) => {
+  let cleaned = String(value || "").replace(/[^\d.,-]/g, "");
+  if (!cleaned) return null;
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+  if (hasComma && hasDot) {
+    cleaned = cleaned.replace(/,/g, "");
+  } else if (hasComma) {
+    const commaParts = cleaned.split(",");
+    const lastPart = commaParts[commaParts.length - 1];
+    cleaned = lastPart.length <= 2 && commaParts.length === 2
+      ? cleaned.replace(",", ".")
+      : cleaned.replace(/,/g, "");
+  }
+
+  const amount = Number(cleaned);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+};
+
+const formatMoneyAmount = (amount) => {
+  const decimals = amount % 1 === 0 ? 0 : 2;
+  return `${new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: 2
+  }).format(amount)} MXN`;
+};
+
+const currentTicketPrice = () => {
+  return parseMoneyAmount(siteConfig?.sorteo?.precio) ?? 0;
+};
+
+const paymentSummary = (record) => {
+  const tickets = Array.isArray(record.ticketNumbers) ? record.ticketNumbers : [];
+  const price = currentTicketPrice();
+  if (!tickets.length || !price) return "Por confirmar";
+  return `${formatMoneyAmount(price * tickets.length)} (${tickets.length} x ${formatMoneyAmount(price)})`;
 };
 
 const loadSiteConfig = async () => {
@@ -518,6 +560,7 @@ const renderAdmin = (records) => {
           <p><strong>Celular:</strong> ${escapeHtml(record.phone)}</p>
           <p><strong>Estado:</strong> ${escapeHtml(record.state)}</p>
           <p><strong>Premio:</strong> ${escapeHtml(record.prize)}</p>
+          <p class="buyer-payment"><strong>Debe pagar:</strong> ${escapeHtml(paymentSummary(record))}</p>
           <p><strong>Apartado:</strong> ${formatDate(record.createdAt)}</p>
           <p><strong>Actualizado:</strong> ${formatDate(record.statusUpdatedAt)}</p>
         </div>
@@ -538,6 +581,9 @@ const renderAdmin = (records) => {
 };
 
 const loadAdmin = async () => {
+  if (!Object.keys(siteConfig).length) {
+    siteConfig = await loadSiteConfig();
+  }
   const data = await api("/api/admin/reservations", {
     headers: { "X-Admin-Key": adminKey }
   });
@@ -605,8 +651,8 @@ adminRows?.addEventListener("click", async (event) => {
 const phoneFromUrl = new URLSearchParams(window.location.search).get("phone");
 
 const initializePage = async () => {
-  const config = await loadSiteConfig();
-  applySiteConfig(config);
+  siteConfig = await loadSiteConfig();
+  applySiteConfig(siteConfig);
   renderTicketButtons();
 
   if (verifyPhone && phoneFromUrl) {
