@@ -22,7 +22,7 @@
     "estado": "Disponible",
     "premio": "Premio de 6000 pesos",
     "descripcion": "Primer sorteo de $6,000 pesos. La rifa se realiza cuando se vendan todos los boletos y el ganador se tomara de los ultimos 2 digitos del Premio Mayor de Loteria Nacional.",
-    "precio": "$300",
+    "precio": "$100",
     "textoPrecio": "boleto",
     "porcentajeVendido": 68
   },
