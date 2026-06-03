@@ -11,7 +11,7 @@ Write-Host "Revisando cambios de Sorteos Guerra..."
 & $git update-index --really-refresh *> $null
 & $git add -A -- .
 
-$currentConfigHash = (& $git hash-object "sorteos-g.json").Trim()
+$currentConfigHash = (& $git hash-object -w "sorteos-g.json").Trim()
 $publishedConfigHash = (& $git rev-parse "HEAD:sorteos-g.json" 2>$null).Trim()
 
 if ($currentConfigHash -and $currentConfigHash -ne $publishedConfigHash) {
