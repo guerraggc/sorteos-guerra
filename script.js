@@ -287,6 +287,23 @@ navMenu?.addEventListener("click", (event) => {
 
 const normalizePhone = (value) => value.replace(/\D/g, "");
 
+const ticketSettingsForPage = () => {
+  const tickets = siteConfig.boletos || {};
+  const start = Number(tickets.inicio || 1);
+  const end = Number(tickets.final || 99);
+  const pad = Number(tickets.digitos || String(end).length);
+  return { start, end, pad };
+};
+
+const normalizeTicketForPage = (value) => {
+  const ticket = String(value || "").trim().replace(/\D/g, "");
+  if (!ticket) return "";
+  const settings = ticketSettingsForPage();
+  const number = Number(ticket);
+  if (!Number.isInteger(number) || number < settings.start || number > settings.end) return "";
+  return String(number).padStart(settings.pad, "0");
+};
+
 const selectedTickets = () => {
   return [...document.querySelectorAll(".number-grid button.is-selected")].map((button) => button.textContent.trim());
 };
@@ -392,10 +409,13 @@ const loadTicketAvailability = async () => {
   }
 };
 
-const renderVerify = (records) => {
-  const rows = records.flatMap((record) => {
+const renderVerify = (records, searchedTicket = "") => {
+  let rows = records.flatMap((record) => {
     return record.ticketNumbers.map((ticket) => ({ ...record, ticket }));
   });
+  if (searchedTicket) {
+    rows = rows.filter((row) => row.ticket === searchedTicket);
+  }
 
   const paid = rows.filter((row) => row.status === "pagado").length;
   const reviewing = rows.filter((row) => row.status === "en_revision").length;
@@ -410,7 +430,7 @@ const renderVerify = (records) => {
   `;
 
   if (!rows.length) {
-    verifyRows.innerHTML = `<tr><td colspan="8">No hay boletos registrados con ese celular.</td></tr>`;
+    verifyRows.innerHTML = `<tr><td colspan="8">No hay boletos registrados con esa busqueda.</td></tr>`;
     return;
   }
 
@@ -428,14 +448,29 @@ const renderVerify = (records) => {
   `).join("");
 };
 
-const loadVerification = async (phone) => {
-  const cleanPhone = normalizePhone(phone);
-  if (!cleanPhone) {
-    verifyRows.innerHTML = `<tr><td colspan="8">Escribe el celular registrado.</td></tr>`;
+const loadVerification = async (value) => {
+  const query = String(value || "").trim();
+  const cleanPhone = normalizePhone(query);
+  const searchedTicket = cleanPhone.length >= 10 ? "" : normalizeTicketForPage(query);
+
+  if (!query) {
+    verifyRows.innerHTML = `<tr><td colspan="8">Escribe el celular registrado o el numero de boleto.</td></tr>`;
     return;
   }
-  const data = await api(`/api/reservations?phone=${encodeURIComponent(cleanPhone)}`);
-  renderVerify(data.reservations);
+  if (!searchedTicket && cleanPhone.length < 10) {
+    verifyRows.innerHTML = `<tr><td colspan="8">Escribe un boleto valido o un celular completo.</td></tr>`;
+    return;
+  }
+
+  const params = new URLSearchParams();
+  if (searchedTicket) {
+    params.set("ticket", searchedTicket);
+  } else {
+    params.set("phone", cleanPhone);
+  }
+
+  const data = await api(`/api/reservations?${params.toString()}`);
+  renderVerify(data.reservations, searchedTicket);
 };
 
 // Apartar boletos y guardar comprobante en la base de datos local.
@@ -683,16 +718,19 @@ adminRows?.addEventListener("click", async (event) => {
   }
 });
 
-const phoneFromUrl = new URLSearchParams(window.location.search).get("phone");
+const verifyParams = new URLSearchParams(window.location.search);
+const phoneFromUrl = verifyParams.get("phone");
+const ticketFromUrl = verifyParams.get("ticket");
 
 const initializePage = async () => {
   siteConfig = await loadSiteConfig();
   applySiteConfig(siteConfig);
   renderTicketButtons();
 
-  if (verifyPhone && phoneFromUrl) {
-    verifyPhone.value = phoneFromUrl;
-    loadVerification(phoneFromUrl).catch((error) => {
+  if (verifyPhone && (phoneFromUrl || ticketFromUrl)) {
+    const verifyValue = phoneFromUrl || ticketFromUrl;
+    verifyPhone.value = verifyValue;
+    loadVerification(verifyValue).catch((error) => {
       verifyRows.innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
     });
   }

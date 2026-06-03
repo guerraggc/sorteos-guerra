@@ -657,14 +657,19 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/reservations") {
+    const ticketSettings = getTicketSettings();
     const phone = cleanPhone(url.searchParams.get("phone"));
+    const ticket = normalizeTicket(url.searchParams.get("ticket"), ticketSettings);
     const store = await loadStore();
     const changed = expireOldReservations(store.reservations);
     await persistExpiredReservations(store, changed);
     const reservations = store.reservations
-      .filter((record) => cleanPhone(record.phone) === phone)
+      .filter((record) => {
+        if (ticket) return record.ticketNumbers.includes(ticket);
+        return phone && cleanPhone(record.phone) === phone;
+      })
       .map(publicReservation);
-    sendJson(res, 200, { reservations });
+    sendJson(res, 200, { reservations, query: { phone: phone || null, ticket: ticket || null } });
     return true;
   }
 
