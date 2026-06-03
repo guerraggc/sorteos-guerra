@@ -1079,12 +1079,13 @@ h1 {
 
 .buyer-actions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
   padding: 0 18px 18px;
 }
 
-.status-action {
+.status-action,
+.admin-delete-action {
   min-height: 48px;
   border: 2px solid var(--blue-dark);
   border-radius: 8px;
@@ -1102,6 +1103,17 @@ h1 {
 .status-action--cancel {
   border-color: #8b8b8b;
   color: #333;
+}
+
+.admin-delete-action {
+  background: #ffe7e7;
+  border-color: #c62828;
+  color: #9b1010;
+}
+
+.admin-delete-action:hover {
+  background: #c62828;
+  color: #fff;
 }
 
 .about {

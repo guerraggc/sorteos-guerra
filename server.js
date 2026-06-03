@@ -400,6 +400,15 @@ async function updateSupabaseReservation(id, patch) {
   return rows && rows[0] ? rowToReservation(rows[0]) : null;
 }
 
+async function deleteSupabaseReservation(id) {
+  await supabaseRequest(`/rest/v1/reservations?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: {
+      Prefer: "return=minimal"
+    }
+  });
+}
+
 function detectImageMime(buffer) {
   if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
     return "image/png";
@@ -470,6 +479,36 @@ async function saveReceipt(dataUrl, originalName) {
     receiptUrl: `/uploads/${receipt.fileName}`,
     receiptName: receipt.receiptName
   };
+}
+
+async function deleteReceipt(record) {
+  if (!record || !record.receiptUrl) return;
+
+  try {
+    if (USE_SUPABASE) {
+      const receiptUrl = new URL(record.receiptUrl);
+      const parts = receiptUrl.pathname.split("/").filter(Boolean);
+      const publicIndex = parts.indexOf("public");
+      const bucket = publicIndex >= 0 ? parts[publicIndex + 1] : "";
+      const objectPath = publicIndex >= 0 ? parts.slice(publicIndex + 2).map(decodeURIComponent).join("/") : "";
+
+      if (bucket === SUPABASE_BUCKET && objectPath) {
+        const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
+        await supabaseRequest(`/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedPath}`, {
+          method: "DELETE"
+        });
+      }
+      return;
+    }
+
+    const receiptUrl = new URL(record.receiptUrl, "http://local.test");
+    if (receiptUrl.pathname.startsWith("/uploads/")) {
+      const target = path.join(UPLOAD_DIR, path.basename(receiptUrl.pathname));
+      if (target.startsWith(UPLOAD_DIR)) fs.rmSync(target, { force: true });
+    }
+  } catch (error) {
+    console.warn("No se pudo borrar el comprobante:", error.message);
+  }
 }
 
 function getClientIp(req) {
@@ -663,6 +702,30 @@ async function handleApi(req, res, url) {
         : reservation;
       if (!USE_SUPABASE) writeDb(store.db);
       sendJson(res, 200, { reservation: publicReservation(savedReservation || reservation, { includeReceipt: true }) });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return true;
+  }
+
+  const deleteMatch = url.pathname.match(/^\/api\/admin\/reservations\/([^/]+)$/);
+  if (req.method === "DELETE" && deleteMatch) {
+    if (!requireAdmin(req, res, url)) return true;
+    try {
+      const store = await loadStore();
+      const changed = expireOldReservations(store.reservations);
+      await persistExpiredReservations(store, changed);
+      const reservationIndex = store.reservations.findIndex((record) => record.id === deleteMatch[1]);
+      if (reservationIndex === -1) throw new Error("Apartado no encontrado.");
+
+      const [reservation] = store.reservations.splice(reservationIndex, 1);
+      if (USE_SUPABASE) {
+        await deleteSupabaseReservation(reservation.id);
+      } else {
+        writeDb(store.db);
+      }
+      await deleteReceipt(reservation);
+      sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
     }

@@ -530,6 +530,7 @@ const renderAdmin = (records) => {
         <button class="status-action" type="button" data-id="${escapeHtml(record.id)}" data-status="en_revision">En revision</button>
         <button class="status-action" type="button" data-id="${escapeHtml(record.id)}" data-status="pendiente">Pendiente</button>
         <button class="status-action status-action--cancel" type="button" data-id="${escapeHtml(record.id)}" data-status="cancelado">Cancelar</button>
+        <button class="admin-delete-action" type="button" data-id="${escapeHtml(record.id)}" data-buyer="Comprador ${buyerNumber}">Borrar</button>
       </div>
     </article>
   `;
@@ -568,6 +569,24 @@ adminSearch?.addEventListener("input", () => {
 });
 
 adminRows?.addEventListener("click", async (event) => {
+  if (event.target.matches(".admin-delete-action")) {
+    const id = event.target.dataset.id;
+    const buyer = event.target.dataset.buyer || "este comprador";
+    const shouldDelete = confirm(`Borrar ${buyer}? Esta accion elimina el apartado y libera sus boletos.`);
+    if (!shouldDelete) return;
+
+    try {
+      await api(`/api/admin/reservations/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { "X-Admin-Key": adminKey }
+      });
+      await loadAdmin();
+    } catch (error) {
+      alert(error.message);
+    }
+    return;
+  }
+
   if (!event.target.matches(".status-action")) return;
   const id = event.target.dataset.id;
   const newStatus = event.target.dataset.status;
