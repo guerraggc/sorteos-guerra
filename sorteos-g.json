@@ -30,7 +30,7 @@
     "inicio": 1,
     "final": 99,
     "digitos": 2,
-    "maximosPorEnvio": 20
+    "maximosPorEnvio": 30
   },
   "contacto": {
     "whatsappNumero": "526371116331",
