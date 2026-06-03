@@ -20,6 +20,7 @@ const adminStats = document.querySelector("#adminStats");
 let adminKey = sessionStorage.getItem("sorteosAdminKey") || "";
 let adminRecords = [];
 let siteConfig = {};
+let adminReceiptObjectUrls = [];
 
 const escapeHtml = (value) => {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -109,6 +110,11 @@ const paymentSummary = (record) => {
   const price = currentTicketPrice();
   if (!tickets.length || !price) return "Por confirmar";
   return `${formatMoneyAmount(price * tickets.length)} (${tickets.length} x ${formatMoneyAmount(price)})`;
+};
+
+const clearAdminReceiptObjectUrls = () => {
+  adminReceiptObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  adminReceiptObjectUrls = [];
 };
 
 const loadSiteConfig = async () => {
@@ -526,6 +532,7 @@ const filterAdminRecords = (records) => {
 };
 
 const renderAdmin = (records) => {
+  clearAdminReceiptObjectUrls();
   adminCount.textContent = `${records.length} comprador${records.length === 1 ? "" : "es"}`;
   if (!records.length) {
     adminRows.innerHTML = `<div class="empty-admin">Todavia no hay compradores registrados.</div>`;
@@ -536,12 +543,10 @@ const renderAdmin = (records) => {
     const status = safeStatus(record.status);
     const buyerNumber = escapeHtml(record.buyerNumber || index + 1);
     const tickets = (Array.isArray(record.ticketNumbers) ? record.ticketNumbers : []).map(escapeHtml).join(", ");
-    const receiptUrl = safeUrl(record.receiptUrl);
-    const receiptPreview = receiptUrl
-      ? `<a class="receipt-preview" href="${escapeHtml(receiptUrl)}" target="_blank" rel="noreferrer">
-          <img src="${escapeHtml(receiptUrl)}" alt="Comprobante de pago del comprador ${buyerNumber}">
-          <span>Ver comprobante completo</span>
-        </a>`
+    const receiptPreview = record.hasReceipt
+      ? `<div class="receipt-preview receipt-preview--pending" id="receipt-${escapeHtml(record.id)}" data-receipt-id="${escapeHtml(record.id)}">
+          <span>Cargando comprobante...</span>
+        </div>`
       : `<div class="receipt-preview"><span>Sin comprobante disponible</span></div>`;
 
     return `
@@ -580,6 +585,32 @@ const renderAdmin = (records) => {
   }).join("");
 };
 
+const loadAdminReceiptPreviews = async (records) => {
+  const recordsWithReceipt = records.filter((record) => record.hasReceipt);
+  await Promise.all(recordsWithReceipt.map(async (record) => {
+    const target = document.getElementById(`receipt-${record.id}`);
+    if (!target) return;
+
+    try {
+      const response = await fetch(`/api/admin/reservations/${encodeURIComponent(record.id)}/receipt`, {
+        headers: { "X-Admin-Key": adminKey }
+      });
+      if (!response.ok) throw new Error("No se pudo cargar el comprobante.");
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      adminReceiptObjectUrls.push(objectUrl);
+      target.innerHTML = `
+        <a class="receipt-preview__link" href="${objectUrl}" target="_blank" rel="noreferrer">
+          <img src="${objectUrl}" alt="Comprobante de pago del comprador ${escapeHtml(record.buyerNumber || "")}">
+          <span>Ver comprobante completo</span>
+        </a>
+      `;
+    } catch {
+      target.innerHTML = `<span>No se pudo cargar el comprobante.</span>`;
+    }
+  }));
+};
+
 const loadAdmin = async () => {
   if (!Object.keys(siteConfig).length) {
     siteConfig = await loadSiteConfig();
@@ -590,7 +621,9 @@ const loadAdmin = async () => {
   adminPanel.hidden = false;
   adminRecords = data.reservations;
   renderAdminStats(adminRecords);
-  renderAdmin(filterAdminRecords(adminRecords));
+  const filteredRecords = filterAdminRecords(adminRecords);
+  renderAdmin(filteredRecords);
+  await loadAdminReceiptPreviews(filteredRecords);
 };
 
 adminLogin?.addEventListener("submit", async (event) => {
@@ -611,7 +644,9 @@ refreshAdmin?.addEventListener("click", () => {
 });
 
 adminSearch?.addEventListener("input", () => {
-  renderAdmin(filterAdminRecords(adminRecords));
+  const filteredRecords = filterAdminRecords(adminRecords);
+  renderAdmin(filteredRecords);
+  loadAdminReceiptPreviews(filteredRecords).catch(() => {});
 });
 
 adminRows?.addEventListener("click", async (event) => {

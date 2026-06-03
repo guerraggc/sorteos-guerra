@@ -1073,10 +1073,18 @@ h1 {
   justify-items: center;
   color: var(--blue-dark);
   text-align: center;
+}
+
+.receipt-preview__link {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  color: var(--blue-dark);
   text-decoration: underline;
 }
 
-.receipt-preview img {
+.receipt-preview img,
+.receipt-preview__link img {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;

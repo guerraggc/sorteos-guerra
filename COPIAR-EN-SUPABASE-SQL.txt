@@ -1,6 +1,6 @@
 IMPORTANTE:
 Antes de copiar esto en Supabase, desactiva la traduccion automatica del navegador.
-El SQL debe quedarse en ingles: create, table, text, true, array, public, storage.
+El SQL debe quedarse en ingles: create, table, text, false, array, public, storage.
 
 COPIA DESDE AQUI:
 
@@ -34,7 +34,7 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 values (
   'receipts',
   'receipts',
-  true,
+  false,
   12582912,
   array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 )

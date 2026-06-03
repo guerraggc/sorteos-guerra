@@ -28,7 +28,7 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 values (
   'receipts',
   'receipts',
-  true,
+  false,
   12582912,
   array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 )

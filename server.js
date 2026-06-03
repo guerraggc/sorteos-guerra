@@ -53,7 +53,7 @@ const PUBLIC_ROOT_FILES = new Set([
   "script.js",
   "favicon.ico"
 ]);
-const PUBLIC_IMAGE_DIRS = new Set(["imagenes", "uploads"]);
+const PUBLIC_IMAGE_DIRS = new Set(["imagenes"]);
 const PUBLIC_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg"]);
 const RATE_LIMITS = new Map();
 
@@ -138,7 +138,7 @@ function setSecurityHeaders(res) {
     "script-src 'self' https://unpkg.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https:",
+    "img-src 'self' data: https: blob:",
     "connect-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -161,6 +161,13 @@ function sendJson(res, statusCode, data) {
   res.setHeader("Cache-Control", "no-store");
   res.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(data));
+}
+
+function sendBinary(res, statusCode, data, contentType) {
+  setSecurityHeaders(res);
+  res.setHeader("Cache-Control", "no-store");
+  res.writeHead(statusCode, { "Content-Type": contentType || "application/octet-stream" });
+  res.end(data);
 }
 
 function readBody(req, limit = MAX_BODY_BYTES) {
@@ -255,7 +262,7 @@ function publicReservation(record, options = {}) {
     heldUntil: record.heldUntil || null
   };
   if (options.includeReceipt) {
-    reservation.receiptUrl = record.receiptUrl;
+    reservation.hasReceipt = Boolean(record.receiptUrl);
     reservation.receiptName = record.receiptName;
   }
   return reservation;
@@ -345,6 +352,25 @@ async function supabaseRequest(pathname, options = {}) {
   }
 }
 
+async function supabaseBinaryRequest(pathname, options = {}) {
+  const response = await fetch(`${SUPABASE_URL}${pathname}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      ...(options.headers || {})
+    }
+  });
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (!response.ok) {
+    throw new Error(`Supabase respondio ${response.status}: ${buffer.toString("utf8") || response.statusText}`);
+  }
+  return {
+    buffer,
+    contentType: response.headers.get("content-type") || "application/octet-stream"
+  };
+}
+
 async function loadStore() {
   if (USE_SUPABASE) {
     const rows = await supabaseRequest("/rest/v1/reservations?select=*&order=created_at.desc");
@@ -409,6 +435,52 @@ async function deleteSupabaseReservation(id) {
   });
 }
 
+function supabaseReceiptObjectPath(record) {
+  if (!record || !record.receiptUrl) return "";
+  const storagePrefix = `storage://${SUPABASE_BUCKET}/`;
+  if (String(record.receiptUrl).startsWith(storagePrefix)) {
+    return String(record.receiptUrl).slice(storagePrefix.length);
+  }
+
+  const receiptUrl = new URL(record.receiptUrl);
+  const parts = receiptUrl.pathname.split("/").filter(Boolean);
+  const publicIndex = parts.indexOf("public");
+  const bucket = publicIndex >= 0 ? parts[publicIndex + 1] : "";
+  const objectPath = publicIndex >= 0 ? parts.slice(publicIndex + 2).map(decodeURIComponent).join("/") : "";
+  return bucket === SUPABASE_BUCKET ? objectPath : "";
+}
+
+function encodedStoragePath(objectPath) {
+  return String(objectPath || "").split("/").filter(Boolean).map(encodeURIComponent).join("/");
+}
+
+function localReceiptPath(record) {
+  if (!record || !record.receiptUrl) return "";
+  const receiptUrl = new URL(record.receiptUrl, "http://local.test");
+  if (!receiptUrl.pathname.startsWith("/uploads/")) return "";
+  return path.join(UPLOAD_DIR, path.basename(receiptUrl.pathname));
+}
+
+async function readReceipt(record) {
+  if (!record || !record.receiptUrl) throw new Error("Comprobante no encontrado.");
+
+  if (USE_SUPABASE) {
+    const objectPath = supabaseReceiptObjectPath(record);
+    if (!objectPath) throw new Error("Comprobante no encontrado.");
+    return supabaseBinaryRequest(`/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedStoragePath(objectPath)}`);
+  }
+
+  const target = localReceiptPath(record);
+  if (!target) throw new Error("Comprobante no encontrado.");
+  const resolvedTarget = path.resolve(target);
+  if (!resolvedTarget.startsWith(UPLOAD_DIR)) throw new Error("Comprobante no encontrado.");
+  const buffer = fs.readFileSync(resolvedTarget);
+  return {
+    buffer,
+    contentType: detectImageMime(buffer) || MIME_TYPES[path.extname(resolvedTarget).toLowerCase()] || "application/octet-stream"
+  };
+}
+
 function detectImageMime(buffer) {
   if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
     return "image/png";
@@ -468,7 +540,7 @@ async function saveReceipt(dataUrl, originalName) {
       body: receipt.buffer
     });
     return {
-      receiptUrl: `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${encodeURIComponent(receipt.fileName)}`,
+      receiptUrl: `storage://${SUPABASE_BUCKET}/${receipt.fileName}`,
       receiptName: receipt.receiptName
     };
   }
@@ -486,25 +558,20 @@ async function deleteReceipt(record) {
 
   try {
     if (USE_SUPABASE) {
-      const receiptUrl = new URL(record.receiptUrl);
-      const parts = receiptUrl.pathname.split("/").filter(Boolean);
-      const publicIndex = parts.indexOf("public");
-      const bucket = publicIndex >= 0 ? parts[publicIndex + 1] : "";
-      const objectPath = publicIndex >= 0 ? parts.slice(publicIndex + 2).map(decodeURIComponent).join("/") : "";
+      const objectPath = supabaseReceiptObjectPath(record);
 
-      if (bucket === SUPABASE_BUCKET && objectPath) {
-        const encodedPath = objectPath.split("/").map(encodeURIComponent).join("/");
-        await supabaseRequest(`/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedPath}`, {
+      if (objectPath) {
+        await supabaseRequest(`/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodedStoragePath(objectPath)}`, {
           method: "DELETE"
         });
       }
       return;
     }
 
-    const receiptUrl = new URL(record.receiptUrl, "http://local.test");
-    if (receiptUrl.pathname.startsWith("/uploads/")) {
-      const target = path.join(UPLOAD_DIR, path.basename(receiptUrl.pathname));
-      if (target.startsWith(UPLOAD_DIR)) fs.rmSync(target, { force: true });
+    const target = localReceiptPath(record);
+    if (target) {
+      const resolvedTarget = path.resolve(target);
+      if (resolvedTarget.startsWith(UPLOAD_DIR)) fs.rmSync(resolvedTarget, { force: true });
     }
   } catch (error) {
     console.warn("No se pudo borrar el comprobante:", error.message);
@@ -552,7 +619,7 @@ async function handleApi(req, res, url) {
     return true;
   }
 
-  if (url.pathname.startsWith("/api/admin/") && !rateLimit(req, res, "admin", 80, 15 * 60 * 1000)) {
+  if (url.pathname.startsWith("/api/admin/") && !rateLimit(req, res, "admin", 240, 15 * 60 * 1000)) {
     return true;
   }
   if (req.method === "POST" && url.pathname === "/api/reservations" && !rateLimit(req, res, "reservations-create", 12, 60 * 60 * 1000)) {
@@ -704,6 +771,21 @@ async function handleApi(req, res, url) {
       sendJson(res, 200, { reservation: publicReservation(savedReservation || reservation, { includeReceipt: true }) });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
+    }
+    return true;
+  }
+
+  const receiptMatch = url.pathname.match(/^\/api\/admin\/reservations\/([^/]+)\/receipt$/);
+  if (req.method === "GET" && receiptMatch) {
+    if (!requireAdmin(req, res, url)) return true;
+    try {
+      const store = await loadStore();
+      const reservation = store.reservations.find((record) => record.id === receiptMatch[1]);
+      if (!reservation) throw new Error("Apartado no encontrado.");
+      const receipt = await readReceipt(reservation);
+      sendBinary(res, 200, receipt.buffer, receipt.contentType);
+    } catch (error) {
+      sendJson(res, 404, { error: error.message });
     }
     return true;
   }
