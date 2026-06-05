@@ -137,7 +137,7 @@ select {
   position: absolute;
   left: clamp(18px, 8vw, 100px);
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-52%);
   z-index: 4;
 }
 
