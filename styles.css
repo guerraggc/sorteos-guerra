@@ -653,6 +653,59 @@ h1 {
   background: #f5fbff;
 }
 
+.random-ticket-box {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) auto auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(111, 215, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(111, 215, 255, 0.1);
+}
+
+.random-ticket-box label {
+  margin-top: 0;
+}
+
+.icon-action-button {
+  min-height: 48px;
+  border: 2px solid var(--blue);
+  border-radius: 8px;
+  padding: 0 14px;
+  background: var(--blue);
+  color: #001018;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  white-space: nowrap;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.icon-action-button:hover {
+  transform: translateY(-1px);
+  background: #fff;
+}
+
+.icon-action-button--ghost {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.icon-action-button--ghost:hover {
+  color: #001018;
+}
+
+.icon-action-button svg {
+  width: 18px;
+  height: 18px;
+}
+
 .number-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1494,6 +1547,14 @@ h1 {
 
   .admin-tools,
   .admin-tools input {
+    width: 100%;
+  }
+
+  .random-ticket-box {
+    grid-template-columns: 1fr;
+  }
+
+  .icon-action-button {
     width: 100%;
   }
 

@@ -44,6 +44,15 @@
               <option>Premio Principal</option>
             </select>
 
+            <div class="random-ticket-box" aria-label="Seleccion al azar">
+              <div>
+                <label for="randomTicketQuantity">Boletos al azar</label>
+                <input id="randomTicketQuantity" type="number" min="1" max="30" value="1" inputmode="numeric">
+              </div>
+              <button class="icon-action-button" id="randomTicketButton" type="button"><i data-lucide="shuffle"></i> Elegir</button>
+              <button class="icon-action-button icon-action-button--ghost" id="clearTicketSelection" type="button"><i data-lucide="eraser"></i> Limpiar</button>
+            </div>
+
             <div class="number-grid" aria-label="Numeros de boleto" data-ticket-start="1" data-ticket-end="99" data-ticket-pad="2">
               <!--
                 PARA AUMENTAR BOLETOS EN OTRO SORTEO:

@@ -4,6 +4,9 @@ const numberGrid = document.querySelector(".number-grid");
 let ticketButtons = [];
 const ticketCount = document.querySelector("#ticketCount");
 const ticketForm = document.querySelector(".ticket-panel");
+const randomTicketQuantity = document.querySelector("#randomTicketQuantity");
+const randomTicketButton = document.querySelector("#randomTicketButton");
+const clearTicketSelectionButton = document.querySelector("#clearTicketSelection");
 const formNote = document.querySelector("#formNote");
 const verifyForm = document.querySelector("#verifyForm");
 const verifyPhone = document.querySelector("#verifyPhone");
@@ -205,6 +208,10 @@ const applySiteConfig = (config = {}) => {
     if (tickets.digitos) numberGrid.dataset.ticketPad = tickets.digitos;
   }
 
+  if (randomTicketQuantity && tickets.maximosPorEnvio) {
+    randomTicketQuantity.max = tickets.maximosPorEnvio;
+  }
+
   const whatsappNumber = String(contact.whatsappNumero || "").replace(/\D/g, "");
   const whatsappText = contact.whatsappTexto || "";
   const whatsappHref = whatsappNumber ? `https://wa.me/${whatsappNumber}` : "";
@@ -292,7 +299,8 @@ const ticketSettingsForPage = () => {
   const start = Number(tickets.inicio || 1);
   const end = Number(tickets.final || 99);
   const pad = Number(tickets.digitos || String(end).length);
-  return { start, end, pad };
+  const maxPerReservation = Number(tickets.maximosPorEnvio || 30);
+  return { start, end, pad, maxPerReservation };
 };
 
 const normalizeTicketForPage = (value) => {
@@ -314,6 +322,23 @@ const updateTicketCount = () => {
   ticketCount.textContent = `${selected} seleccionado${selected === 1 ? "" : "s"}`;
 };
 
+const setSelectedTickets = (buttons) => {
+  ticketButtons.forEach((button) => button.classList.remove("is-selected"));
+  buttons.forEach((button) => {
+    if (!button.disabled) button.classList.add("is-selected");
+  });
+  updateTicketCount();
+};
+
+const shuffleButtons = (buttons) => {
+  const shuffled = [...buttons];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+};
+
 const bindTicketButtons = () => {
   ticketButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -323,6 +348,37 @@ const bindTicketButtons = () => {
     });
   });
 };
+
+randomTicketButton?.addEventListener("click", () => {
+  const configuredMax = Number(randomTicketQuantity?.max || ticketSettingsForPage().maxPerReservation || 30);
+  const max = Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : 30;
+  const requestedNumber = Number(randomTicketQuantity?.value || 1);
+  const requested = Number.isFinite(requestedNumber) ? requestedNumber : 1;
+  const quantity = Math.max(1, Math.min(max, Math.floor(requested)));
+  const availableButtons = ticketButtons.filter((button) => !button.disabled);
+
+  if (randomTicketQuantity) {
+    randomTicketQuantity.value = String(quantity);
+  }
+
+  if (!availableButtons.length) {
+    formNote.textContent = "No hay boletos disponibles para elegir al azar.";
+    return;
+  }
+
+  if (quantity > availableButtons.length) {
+    formNote.textContent = `Solo hay ${availableButtons.length} boleto${availableButtons.length === 1 ? "" : "s"} disponible${availableButtons.length === 1 ? "" : "s"}.`;
+    return;
+  }
+
+  setSelectedTickets(shuffleButtons(availableButtons).slice(0, quantity));
+  formNote.textContent = `${quantity} boleto${quantity === 1 ? "" : "s"} elegido${quantity === 1 ? "" : "s"} al azar.`;
+});
+
+clearTicketSelectionButton?.addEventListener("click", () => {
+  setSelectedTickets([]);
+  formNote.textContent = "Seleccion limpia.";
+});
 
 const fileToDataUrl = (file) => {
   return new Promise((resolve, reject) => {
@@ -377,6 +433,9 @@ const loadTicketAvailability = async () => {
   try {
     const data = await api("/api/tickets");
     const unavailable = new Map(data.unavailableTickets.map((item) => [item.ticket, item]));
+    if (randomTicketQuantity && data.tickets?.maxPerReservation) {
+      randomTicketQuantity.max = data.tickets.maxPerReservation;
+    }
 
     ticketButtons.forEach((button) => {
       const ticket = button.textContent.trim();
