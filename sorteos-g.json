@@ -1,4 +1,4 @@
-{
+﻿{
   "_instrucciones": [
     "Este es el archivo principal para cambiar el sorteo.",
     "Cambia solo lo que esta despues de los dos puntos.",
@@ -6,13 +6,13 @@
     "Si dejas una imagen vacia, la pagina muestra el cuadro azul con numero de imagen."
   ],
   "sitio": {
-    "nombre": "Sorteos Guerra",
+    "nombre": "Sorteos El Yorch",
     "lema": "APUESTA POCO GANA MUCHO",
     "frasePrincipal": "ARRIESGA POCO Y GANA MUCHO",
-    "textoFooter": "Sitio desarrollado para Sorteos Guerra"
+    "textoFooter": "Sitio desarrollado para Sorteos El Yorch"
   },
   "imagenes": {
-    "logo": "imagenes/logo-sorteos-guerra.png",
+    "logo": "imagenes/logo-sorteos-el-yorch.png",
     "imagen1": "imagenes/premio-6000.svg",
     "imagen2": "",
     "imagen3": "imagenes/premio-6000.svg",
@@ -41,7 +41,7 @@
   "pago": {
     "banco": "Banco banorte",
     "clabe": "000 000 000 000 000 000",
-    "titular": "Sorteos Guerra",
+    "titular": "Sorteos El Yorch",
     "nota": "Al apartar tus boletos sube la imagen del comprobante. El pago se verifica desde el panel de administracion."
   },
   "inicio": {
@@ -52,3 +52,4 @@
     "marquesina3": "TRANSMISION EN VIVO"
   }
 }
+

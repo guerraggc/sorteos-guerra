@@ -1,6 +1,6 @@
-services:
+﻿services:
   - type: web
-    name: sorteos-guerra
+    name: sorteos-el-yorch
     runtime: node
     plan: free
     buildCommand: npm install
@@ -19,3 +19,4 @@ services:
         sync: false
       - key: SUPABASE_BUCKET
         value: receipts
+

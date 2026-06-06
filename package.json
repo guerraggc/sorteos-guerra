@@ -1,7 +1,7 @@
-{
-  "name": "sorteos-guerra",
+﻿{
+  "name": "sorteos-el-yorch",
   "version": "1.0.0",
-  "description": "Pagina y sistema de apartados para Sorteos Guerra.",
+  "description": "Pagina y sistema de apartados para Sorteos El Yorch.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,3 +11,4 @@
   },
   "private": true
 }
+

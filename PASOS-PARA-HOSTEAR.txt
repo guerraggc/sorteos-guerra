@@ -1,4 +1,4 @@
-SORTEOS GUERRA - PASOS PARA HOSTEAR GRATIS
+﻿SORTEOS EL YORCH - PASOS PARA HOSTEAR GRATIS
 
 RECOMENDACION:
 Usa Render para la pagina y Supabase para la base de datos/comprobantes.
@@ -33,3 +33,4 @@ Usa Render para la pagina y Supabase para la base de datos/comprobantes.
 - Abre https://tu-app.onrender.com/api/health
 
 Si api/health dice "storage":"supabase", ya quedo conectado.
+

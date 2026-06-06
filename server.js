@@ -1,4 +1,4 @@
-const http = require("http");
+﻿const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -9,7 +9,7 @@ const UPLOAD_DIR = path.join(ROOT, "uploads");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 const CONFIG_FILE = path.join(ROOT, "sorteos-g.json");
 const IS_HOSTED = Boolean(process.env.PORT || process.env.RENDER || process.env.RENDER_SERVICE_ID);
-const ADMIN_KEY = String(process.env.ADMIN_KEY || (IS_HOSTED ? "" : "guerra2026")).trim();
+const ADMIN_KEY = String(process.env.ADMIN_KEY || (IS_HOSTED ? "" : "elyorch2026")).trim();
 const HOLD_HOURS = 48;
 const HOLD_MS = HOLD_HOURS * 60 * 60 * 1000;
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
@@ -898,7 +898,7 @@ function startServer(port = process.env.PORT || 56684) {
 
   server.listen(port, host, () => {
     const address = server.address();
-    console.log(`Sorteos Guerra listo en http://127.0.0.1:${address.port}/`);
+    console.log(`Sorteos El Yorch listo en http://127.0.0.1:${address.port}/`);
   });
   return server;
 }
@@ -908,3 +908,4 @@ if (require.main === module) {
 }
 
 module.exports = { startServer };
+

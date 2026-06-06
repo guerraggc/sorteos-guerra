@@ -371,8 +371,8 @@ select {
 h1 {
   margin: 0;
   color: #fff;
-  font-size: clamp(44px, 9vw, 104px);
-  line-height: 0.92;
+  font-size: clamp(42px, 7.2vw, 86px);
+  line-height: 0.96;
   letter-spacing: 0;
   text-transform: uppercase;
   text-shadow: 0 5px 11px rgba(0, 0, 0, 0.6);

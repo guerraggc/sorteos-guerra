@@ -1,15 +1,15 @@
-# Sorteos Guerra - hosting
+﻿# Sorteos El Yorch - hosting
 
 ## Local
 
 1. Instala Node.js si no lo tienes.
-2. Abre `Iniciar Sorteos Guerra.bat` en el Escritorio.
+2. Abre `Iniciar Sorteos El Yorch.bat` en el Escritorio.
 3. Entra a `http://127.0.0.1:56684/index.html`.
 
 ## Admin
 
 - Pagina: `admin.html`
-- Clave inicial local: `guerra2026`
+- Clave inicial local: `elyorch2026`
 - En hosting cambia la clave con la variable de entorno `ADMIN_KEY`.
 
 ## Donde hostear
@@ -81,3 +81,4 @@ Si dice `"storage":"local"`, falta poner las variables de Supabase en Render.
 - `render.yaml`: configuracion lista para Render.
 - `.env.example`: ejemplo de variables.
 - `.gitignore`: evita subir datos privados locales.
+

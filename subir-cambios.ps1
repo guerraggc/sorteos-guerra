@@ -1,11 +1,11 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $repo = "C:\Users\lydia\OneDrive\Documentos\pagina web"
 $git = "C:\Program Files\Git\cmd\git.exe"
 
 Set-Location $repo
 
-Write-Host "Revisando cambios de Sorteos Guerra..."
+Write-Host "Revisando cambios de Sorteos El Yorch..."
 
 & $git update-index --no-assume-unchanged --no-skip-worktree sorteos-g.json 2>$null
 & $git update-index --really-refresh *> $null
@@ -29,7 +29,7 @@ if (-not $changes.Count) {
 Write-Host "Cambios detectados:"
 $changes | ForEach-Object { Write-Host " - $_" }
 
-& $git commit -m "Actualizar cambios de Sorteos Guerra"
+& $git commit -m "Actualizar cambios de Sorteos El Yorch"
 if ($LASTEXITCODE -ne 0) {
   throw "No se pudo crear el commit."
 }
@@ -40,3 +40,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Listo. Render puede tardar unos minutos en mostrar los cambios."
+

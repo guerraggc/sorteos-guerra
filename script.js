@@ -1,4 +1,4 @@
-const menuButton = document.querySelector(".nav-toggle");
+﻿const menuButton = document.querySelector(".nav-toggle");
 const navMenu = document.querySelector("#navMenu");
 const numberGrid = document.querySelector(".number-grid");
 let ticketButtons = [];
@@ -165,7 +165,7 @@ const applySiteConfig = (config = {}) => {
   const payment = config.pago || {};
   const home = config.inicio || {};
 
-  const siteName = site.nombre || "Sorteos Guerra";
+  const siteName = site.nombre || "Sorteos El Yorch";
   const currentTitle = document.title.split("|")[1]?.trim();
   document.title = currentTitle ? `${siteName} | ${currentTitle}` : siteName;
 
@@ -265,7 +265,7 @@ const showServerRequiredMessage = () => {
   message.className = "server-warning";
   message.innerHTML = `
     <strong>Abre el panel con el servidor prendido</strong>
-    <p>Esta pagina no funciona si la abres como archivo directo. Usa el acceso del Escritorio <b>Abrir Panel Sorteos Guerra.bat</b> o entra a:</p>
+    <p>Esta pagina no funciona si la abres como archivo directo. Usa el acceso del Escritorio <b>Abrir Panel Sorteos El Yorch.bat</b> o entra a:</p>
     <a href="http://127.0.0.1:56684/admin.html">http://127.0.0.1:56684/admin.html</a>
   `;
   document.body.prepend(message);
@@ -804,3 +804,4 @@ const initializePage = async () => {
 };
 
 initializePage();
+
