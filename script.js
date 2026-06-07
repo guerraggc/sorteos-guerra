@@ -226,7 +226,12 @@ const applySiteConfig = (config = {}) => {
   if (socialLinks[2] && contact.telefono) socialLinks[2].href = `tel:${contact.telefono}`;
 
   setText(".payment-grid article p:nth-of-type(1)", payment.banco ? `Banco: ${payment.banco}` : "");
-  setText(".payment-grid article p:nth-of-type(2)", payment.clabe ? `CLABE: ${payment.clabe}` : "");
+  const paymentAccount = payment.tarjeta
+    ? `Tarjeta: ${payment.tarjeta}`
+    : payment.clabe
+      ? `CLABE: ${payment.clabe}`
+      : "";
+  setText(".payment-grid article p:nth-of-type(2)", paymentAccount);
   setText(".payment-grid article p:nth-of-type(3)", payment.titular ? `Nombre: ${payment.titular}` : "");
   setText(".payment-grid article p:nth-of-type(4)", payment.nota);
 
