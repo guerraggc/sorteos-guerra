@@ -9,7 +9,7 @@
 ## Admin
 
 - Pagina: `admin.html`
-- Clave inicial local: `elyorch2026`
+- Clave inicial local: `guerra2026`
 - En hosting cambia la clave con la variable de entorno `ADMIN_KEY`.
 
 ## Donde hostear
