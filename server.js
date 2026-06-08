@@ -21,7 +21,10 @@ const DEFAULT_TICKET_PAD = Number.parseInt(process.env.TICKET_PAD || String(DEFA
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || "receipts").trim().replace(/[^\w.-]/g, "") || "receipts";
+const RAW_SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || "receipts").trim().replace(/[^\w.-]/g, "");
+const SUPABASE_BUCKET = RAW_SUPABASE_BUCKET && !RAW_SUPABASE_BUCKET.startsWith("SUPABASE_")
+  ? RAW_SUPABASE_BUCKET
+  : "receipts";
 const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
 const MIME_TYPES = {
