@@ -909,6 +909,8 @@ adminLogin?.addEventListener("submit", async (event) => {
   try {
     await loadAdmin();
   } catch (error) {
+    sessionStorage.removeItem("sorteosAdminKey");
+    adminKey = "";
     adminRows.innerHTML = "";
     adminPanel.hidden = true;
     alert(error.message);
@@ -980,6 +982,8 @@ const initializePage = async () => {
 
   if (adminPanel && adminKey) {
     loadAdmin().catch(() => {
+      sessionStorage.removeItem("sorteosAdminKey");
+      adminKey = "";
       adminPanel.hidden = true;
     });
   }
