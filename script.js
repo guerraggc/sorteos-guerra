@@ -12,6 +12,7 @@ const verifyForm = document.querySelector("#verifyForm");
 const verifyPhone = document.querySelector("#verifyPhone");
 const verifyRows = document.querySelector("#verifyRows");
 const verifySummary = document.querySelector("#verifySummary");
+const verifyReceiptArea = document.querySelector("#verifyReceiptArea");
 const adminLogin = document.querySelector("#adminLogin");
 const adminPanel = document.querySelector("#adminPanel");
 const adminRows = document.querySelector("#adminRows");
@@ -24,6 +25,10 @@ let adminKey = sessionStorage.getItem("sorteosAdminKey") || "";
 let adminRecords = [];
 let siteConfig = {};
 let adminReceiptObjectUrls = [];
+let lastVerificationQuery = "";
+
+const RECEIPT_MAX_BYTES = 12 * 1024 * 1024;
+const RECEIPT_ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
 const escapeHtml = (value) => {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -394,6 +399,66 @@ const fileToDataUrl = (file) => {
   });
 };
 
+const canvasToBlob = (canvas, type, quality) => {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("No se pudo preparar la imagen del comprobante."));
+    }, type, quality);
+  });
+};
+
+const compressReceiptImage = async (file) => {
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return file;
+  if (file.size <= 1.5 * 1024 * 1024) return file;
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    const loaded = new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error("No se pudo abrir la imagen. Intenta con JPG o PNG."));
+    });
+    image.src = imageUrl;
+    await loaded;
+
+    const maxSide = 1800;
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await canvasToBlob(canvas, "image/jpeg", 0.82);
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+};
+
+const receiptFileToDataUrl = async (file) => {
+  if (!file || !file.size) {
+    throw new Error("Selecciona la imagen del comprobante.");
+  }
+  if (!RECEIPT_ALLOWED_TYPES.has(file.type)) {
+    throw new Error("Usa una imagen JPG, PNG, WEBP o GIF. Si tu celular guarda HEIC, conviertela a JPG.");
+  }
+
+  const preparedFile = await compressReceiptImage(file);
+  if (preparedFile.size > RECEIPT_MAX_BYTES) {
+    throw new Error("El comprobante esta muy pesado. Usa una imagen menor a 12 MB.");
+  }
+
+  return {
+    dataUrl: await fileToDataUrl(preparedFile),
+    name: preparedFile.name
+  };
+};
+
 const formatDate = (value) => {
   if (!value) return "-";
   return new Intl.DateTimeFormat("es-MX", {
@@ -473,7 +538,87 @@ const loadTicketAvailability = async () => {
   }
 };
 
+const uniqueReservations = (records) => {
+  const seen = new Set();
+  return records.filter((record) => {
+    if (seen.has(record.id)) return false;
+    seen.add(record.id);
+    return true;
+  });
+};
+
+const renderReceiptUpload = (records) => {
+  if (!verifyReceiptArea) return;
+
+  const reservations = uniqueReservations(records);
+  if (!reservations.length) {
+    verifyReceiptArea.innerHTML = "";
+    return;
+  }
+
+  const cleanQueryPhone = normalizePhone(lastVerificationQuery);
+  const prefillPhone = cleanQueryPhone.length >= 10 ? cleanQueryPhone : "";
+
+  verifyReceiptArea.innerHTML = reservations.map((record) => {
+    const status = safeStatus(record.status);
+    const tickets = (Array.isArray(record.ticketNumbers) ? record.ticketNumbers : []).map(escapeHtml).join(", ");
+    const buyer = escapeHtml(record.buyerNumber || "");
+    const statusText = statusLabel(status);
+    const amount = escapeHtml(paymentSummary(record));
+
+    if (record.hasReceipt) {
+      return `
+        <article class="receipt-upload-card receipt-upload-card--received">
+          <div>
+            <span>Comprador ${buyer}</span>
+            <strong>Comprobante recibido</strong>
+            <p>Boletos: ${tickets}</p>
+            <p>Estado: ${escapeHtml(statusText)}</p>
+          </div>
+        </article>
+      `;
+    }
+
+    if (status === "cancelado" || status === "expirado" || status === "pagado") {
+      return `
+        <article class="receipt-upload-card">
+          <div>
+            <span>Comprador ${buyer}</span>
+            <strong>No se puede subir comprobante</strong>
+            <p>Boletos: ${tickets}</p>
+            <p>Estado: ${escapeHtml(statusText)}</p>
+          </div>
+        </article>
+      `;
+    }
+
+    return `
+      <article class="receipt-upload-card">
+        <div>
+          <span>Comprador ${buyer}</span>
+          <strong>Subir comprobante de transferencia</strong>
+          <p>Boletos: ${tickets}</p>
+          <p>Debe pagar: ${amount}</p>
+        </div>
+        <form class="receipt-upload-form" data-id="${escapeHtml(record.id)}">
+          <label>
+            Celular registrado
+            <input name="phone" type="tel" inputmode="numeric" value="${escapeHtml(prefillPhone)}" placeholder="Celular">
+          </label>
+          <label>
+            Imagen del comprobante
+            <input name="receipt" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+          </label>
+          <button class="solid-button solid-button--small" type="submit">Enviar comprobante</button>
+          <p class="receipt-upload-note" role="status" aria-live="polite"></p>
+        </form>
+      </article>
+    `;
+  }).join("");
+};
+
 const renderVerify = (records, searchedTicket = "") => {
+  renderReceiptUpload(records);
   let rows = records.flatMap((record) => {
     return record.ticketNumbers.map((ticket) => ({ ...record, ticket }));
   });
@@ -514,14 +659,17 @@ const renderVerify = (records, searchedTicket = "") => {
 
 const loadVerification = async (value) => {
   const query = String(value || "").trim();
+  lastVerificationQuery = query;
   const cleanPhone = normalizePhone(query);
   const searchedTicket = cleanPhone.length >= 10 ? "" : normalizeTicketForPage(query);
 
   if (!query) {
+    renderReceiptUpload([]);
     verifyRows.innerHTML = `<tr><td colspan="8">Escribe el celular registrado o el numero de boleto.</td></tr>`;
     return;
   }
   if (!searchedTicket && cleanPhone.length < 10) {
+    renderReceiptUpload([]);
     verifyRows.innerHTML = `<tr><td colspan="8">Escribe un boleto valido o un celular completo.</td></tr>`;
     return;
   }
@@ -537,12 +685,11 @@ const loadVerification = async (value) => {
   renderVerify(data.reservations, searchedTicket);
 };
 
-// Apartar boletos y guardar comprobante en la base de datos local.
+// Apartar boletos. El comprobante se sube despues desde Verificar.
 ticketForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const selected = selectedTickets();
   const form = new FormData(ticketForm);
-  const receipt = form.get("comprobante");
   const name = String(form.get("nombre") || "").trim();
   const lastName = String(form.get("apellido") || "").trim();
   const state = String(form.get("estado") || "").trim();
@@ -556,15 +703,9 @@ ticketForm?.addEventListener("submit", async (event) => {
     formNote.textContent = "Completa nombre, apellido, estado y celular.";
     return;
   }
-  if (!receipt || !receipt.size) {
-    formNote.textContent = "Sube una imagen del comprobante de pago.";
-    return;
-  }
-
   formNote.textContent = "Guardando apartado...";
 
   try {
-    const receiptDataUrl = await fileToDataUrl(receipt);
     const data = await api("/api/reservations", {
       method: "POST",
       body: JSON.stringify({
@@ -573,9 +714,7 @@ ticketForm?.addEventListener("submit", async (event) => {
         name,
         lastName,
         state,
-        phone,
-        receiptName: receipt.name,
-        receiptDataUrl
+        phone
       })
     });
 
@@ -592,6 +731,44 @@ verifyForm?.addEventListener("submit", async (event) => {
     await loadVerification(verifyPhone.value);
   } catch (error) {
     verifyRows.innerHTML = `<tr><td colspan="8">${escapeHtml(error.message)}</td></tr>`;
+  }
+});
+
+verifyReceiptArea?.addEventListener("submit", async (event) => {
+  if (!event.target.matches(".receipt-upload-form")) return;
+  event.preventDefault();
+
+  const form = event.target;
+  const note = form.querySelector(".receipt-upload-note");
+  const data = new FormData(form);
+  const id = form.dataset.id;
+  const phone = normalizePhone(String(data.get("phone") || ""));
+  const receipt = data.get("receipt");
+
+  if (!phone || phone.length < 10) {
+    note.textContent = "Escribe el celular registrado en el apartado.";
+    return;
+  }
+
+  note.textContent = "Preparando comprobante...";
+
+  try {
+    const preparedReceipt = await receiptFileToDataUrl(receipt);
+    note.textContent = "Enviando comprobante...";
+    await api(`/api/reservations/${encodeURIComponent(id)}/receipt`, {
+      method: "POST",
+      body: JSON.stringify({
+        phone,
+        receiptName: preparedReceipt.name,
+        receiptDataUrl: preparedReceipt.dataUrl
+      })
+    });
+
+    note.textContent = "Comprobante recibido. Tu pago quedo en revision.";
+    if (verifyPhone && !verifyPhone.value.trim()) verifyPhone.value = phone;
+    await loadVerification(verifyPhone?.value || phone);
+  } catch (error) {
+    note.textContent = error.message;
   }
 });
 

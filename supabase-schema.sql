@@ -9,10 +9,10 @@ create table if not exists public.reservations (
   phone text not null,
   status text not null default 'en_revision'
     check (status in ('en_revision', 'pendiente', 'pagado', 'cancelado', 'expirado')),
-  receipt_url text not null,
+  receipt_url text,
   receipt_name text,
   created_at timestamptz not null default now(),
-  sent_at timestamptz not null default now(),
+  sent_at timestamptz,
   paid_at timestamptz,
   status_updated_at timestamptz,
   held_until timestamptz
@@ -23,6 +23,9 @@ create index if not exists reservations_status_idx on public.reservations (statu
 create index if not exists reservations_created_at_idx on public.reservations (created_at desc);
 
 alter table public.reservations enable row level security;
+
+alter table public.reservations alter column receipt_url drop not null;
+alter table public.reservations alter column sent_at drop not null;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

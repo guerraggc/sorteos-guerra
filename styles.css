@@ -779,6 +779,18 @@ h1 {
   line-height: 1.4;
 }
 
+.ticket-payment-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(111, 215, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(111, 215, 255, 0.12);
+  color: #fff;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .questions {
   background: #fff;
 }
@@ -871,6 +883,87 @@ h1 {
   gap: 4px;
   margin: 26px 0 22px;
   color: var(--blue-dark);
+}
+
+.receipt-upload-area {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 24px;
+}
+
+.receipt-upload-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
+  gap: 18px;
+  align-items: start;
+  padding: 18px;
+  border: 2px solid #d4ebf5;
+  border-left: 8px solid var(--blue-dark);
+  border-radius: 8px;
+  background: #f5fcff;
+  color: var(--blue-deep);
+}
+
+.receipt-upload-card--received {
+  grid-template-columns: 1fr;
+  border-left-color: #00a000;
+  background: #f3fff3;
+}
+
+.receipt-upload-card span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--blue-dark);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.receipt-upload-card strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 22px;
+}
+
+.receipt-upload-card p {
+  margin: 5px 0;
+}
+
+.receipt-upload-form {
+  display: grid;
+  gap: 12px;
+}
+
+.receipt-upload-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receipt-upload-form input {
+  width: 100%;
+  min-height: 46px;
+  border: 2px solid #aacede;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  color: #111;
+  font-weight: 800;
+}
+
+.receipt-upload-form input[type="file"] {
+  min-height: auto;
+  padding: 11px;
+}
+
+.receipt-upload-note {
+  min-height: 20px;
+  margin: 0;
+  color: var(--blue-dark);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .table-wrap {
@@ -1529,6 +1622,10 @@ h1 {
   .verify-form input,
   .admin-login input {
     width: 100%;
+  }
+
+  .receipt-upload-card {
+    grid-template-columns: 1fr;
   }
 
   .buyer-card__header,

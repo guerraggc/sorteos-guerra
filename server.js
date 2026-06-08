@@ -12,8 +12,8 @@ const IS_HOSTED = Boolean(process.env.PORT || process.env.RENDER || process.env.
 const ADMIN_KEY = String(process.env.ADMIN_KEY || (IS_HOSTED ? "" : "elyorch2026")).trim();
 const HOLD_HOURS = 48;
 const HOLD_MS = HOLD_HOURS * 60 * 60 * 1000;
-const MAX_BODY_BYTES = 12 * 1024 * 1024;
-const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
+const MAX_BODY_BYTES = 18 * 1024 * 1024;
+const MAX_RECEIPT_BYTES = 12 * 1024 * 1024;
 const DEFAULT_MAX_TICKETS_PER_RESERVATION = 30;
 const DEFAULT_TICKET_START = Number.parseInt(process.env.TICKET_START || "1", 10);
 const DEFAULT_TICKET_END = Number.parseInt(process.env.TICKET_END || "99", 10);
@@ -256,7 +256,7 @@ function publicReservation(record, options = {}) {
     phone: record.phone,
     status: record.status,
     createdAt: record.createdAt,
-    sentAt: record.sentAt,
+    sentAt: record.receiptUrl ? record.sentAt : null,
     paidAt: record.paidAt || null,
     statusUpdatedAt: record.statusUpdatedAt || null,
     heldUntil: record.heldUntil || null
@@ -298,10 +298,10 @@ function reservationToRow(record, includeBuyerNumber = false) {
     state: record.state,
     phone: record.phone,
     status: record.status,
-    receipt_url: record.receiptUrl,
+    receipt_url: record.receiptUrl || "",
     receipt_name: record.receiptName,
     created_at: record.createdAt,
-    sent_at: record.sentAt,
+    sent_at: record.sentAt || record.createdAt,
     paid_at: record.paidAt || null,
     status_updated_at: record.statusUpdatedAt || null,
     held_until: record.heldUntil || null
@@ -414,6 +414,9 @@ async function updateSupabaseReservation(id, patch) {
   if ("paidAt" in patch) rowPatch.paid_at = patch.paidAt;
   if ("statusUpdatedAt" in patch) rowPatch.status_updated_at = patch.statusUpdatedAt;
   if ("heldUntil" in patch) rowPatch.held_until = patch.heldUntil;
+  if ("sentAt" in patch) rowPatch.sent_at = patch.sentAt;
+  if ("receiptUrl" in patch) rowPatch.receipt_url = patch.receiptUrl;
+  if ("receiptName" in patch) rowPatch.receipt_name = patch.receiptName;
 
   const rows = await supabaseRequest(`/rest/v1/reservations?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
@@ -507,7 +510,7 @@ function parseReceipt(dataUrl, originalName) {
   const mime = match[1];
   const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
   if (!buffer.length || buffer.length > MAX_RECEIPT_BYTES) {
-    throw new Error("El comprobante esta muy pesado. Usa una imagen menor a 8 MB.");
+    throw new Error("El comprobante esta muy pesado. Usa una imagen menor a 12 MB.");
   }
   if (detectImageMime(buffer) !== mime) {
     throw new Error("El comprobante no parece ser una imagen valida.");
@@ -625,6 +628,9 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/reservations" && !rateLimit(req, res, "reservations-create", 12, 60 * 60 * 1000)) {
     return true;
   }
+  if (req.method === "POST" && /^\/api\/reservations\/[^/]+\/receipt$/.test(url.pathname) && !rateLimit(req, res, "receipt-upload", 24, 60 * 60 * 1000)) {
+    return true;
+  }
   if (req.method === "GET" && url.pathname === "/api/reservations" && !rateLimit(req, res, "reservations-check", 120, 15 * 60 * 1000)) {
     return true;
   }
@@ -668,7 +674,7 @@ async function handleApi(req, res, url) {
         if (ticket) return record.ticketNumbers.includes(ticket);
         return phone && cleanPhone(record.phone) === phone;
       })
-      .map(publicReservation);
+      .map((record) => publicReservation(record, { includeReceipt: true }));
     sendJson(res, 200, { reservations, query: { phone: phone || null, ticket: ticket || null } });
     return true;
   }
@@ -707,7 +713,6 @@ async function handleApi(req, res, url) {
         throw new Error(`Estos boletos ya estan apartados: ${taken.join(", ")}`);
       }
 
-      const receipt = await saveReceipt(body.receiptDataUrl, body.receiptName);
       const now = new Date().toISOString();
       const reservation = {
         id: crypto.randomUUID(),
@@ -718,11 +723,11 @@ async function handleApi(req, res, url) {
         lastName,
         state,
         phone,
-        status: "en_revision",
-        receiptUrl: receipt.receiptUrl,
-        receiptName: receipt.receiptName,
+        status: "pendiente",
+        receiptUrl: "",
+        receiptName: "",
         createdAt: now,
-        sentAt: now,
+        sentAt: null,
         paidAt: null,
         statusUpdatedAt: now,
         heldUntil: new Date(Date.now() + HOLD_MS).toISOString()
@@ -735,6 +740,59 @@ async function handleApi(req, res, url) {
         writeDb(store.db);
       }
       sendJson(res, 201, { reservation: publicReservation(savedReservation) });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
+    return true;
+  }
+
+  const publicReceiptMatch = url.pathname.match(/^\/api\/reservations\/([^/]+)\/receipt$/);
+  if (req.method === "POST" && publicReceiptMatch) {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const phone = cleanPhone(body.phone);
+      if (phone.length < 10 || phone.length > 15) {
+        throw new Error("El celular debe tener entre 10 y 15 digitos.");
+      }
+
+      const store = await loadStore();
+      const changed = expireOldReservations(store.reservations);
+      await persistExpiredReservations(store, changed);
+
+      const reservation = store.reservations.find((record) => record.id === publicReceiptMatch[1]);
+      if (!reservation) throw new Error("Apartado no encontrado.");
+      if (cleanPhone(reservation.phone) !== phone) {
+        throw new Error("El celular no coincide con este apartado.");
+      }
+      if (reservation.status === "cancelado") throw new Error("Este apartado esta cancelado.");
+      if (reservation.status === "expirado" || isHoldExpired(reservation)) {
+        reservation.status = "expirado";
+        reservation.statusUpdatedAt = new Date().toISOString();
+        reservation.paidAt = null;
+        if (!USE_SUPABASE) writeDb(store.db);
+        else await updateSupabaseReservation(reservation.id, reservation);
+        throw new Error("Este apartado ya expiro. Vuelve a apartar boletos disponibles.");
+      }
+      if (reservation.status === "pagado") throw new Error("Este apartado ya esta marcado como pagado.");
+
+      const oldReceipt = { ...reservation };
+      const receipt = await saveReceipt(body.receiptDataUrl, body.receiptName);
+      const now = new Date().toISOString();
+      reservation.status = "en_revision";
+      reservation.receiptUrl = receipt.receiptUrl;
+      reservation.receiptName = receipt.receiptName;
+      reservation.sentAt = now;
+      reservation.statusUpdatedAt = now;
+      reservation.paidAt = null;
+      reservation.heldUntil = new Date(Date.now() + HOLD_MS).toISOString();
+
+      const savedReservation = USE_SUPABASE
+        ? await updateSupabaseReservation(reservation.id, reservation)
+        : reservation;
+      if (!USE_SUPABASE) writeDb(store.db);
+      if (oldReceipt.receiptUrl) await deleteReceipt(oldReceipt);
+
+      sendJson(res, 200, { reservation: publicReservation(savedReservation || reservation, { includeReceipt: true }) });
     } catch (error) {
       sendJson(res, 400, { error: error.message });
     }
