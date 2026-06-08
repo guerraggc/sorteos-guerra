@@ -19,9 +19,9 @@ const DEFAULT_TICKET_START = Number.parseInt(process.env.TICKET_START || "1", 10
 const DEFAULT_TICKET_END = Number.parseInt(process.env.TICKET_END || "99", 10);
 const DEFAULT_TICKET_PAD = Number.parseInt(process.env.TICKET_PAD || String(DEFAULT_TICKET_END).length, 10);
 
-const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/$/, "");
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "receipts";
+const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || "receipts").trim().replace(/[^\w.-]/g, "") || "receipts";
 const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
 const MIME_TYPES = {
@@ -371,6 +371,30 @@ async function supabaseBinaryRequest(pathname, options = {}) {
   };
 }
 
+async function ensureSupabaseReceiptBucket() {
+  if (!USE_SUPABASE) return;
+
+  const buckets = await supabaseRequest("/storage/v1/bucket");
+  const exists = Array.isArray(buckets) && buckets.some((bucket) => {
+    return bucket && (bucket.id === SUPABASE_BUCKET || bucket.name === SUPABASE_BUCKET);
+  });
+  if (exists) return;
+
+  await supabaseRequest("/storage/v1/bucket", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      id: SUPABASE_BUCKET,
+      name: SUPABASE_BUCKET,
+      public: false,
+      file_size_limit: MAX_RECEIPT_BYTES,
+      allowed_mime_types: ["image/png", "image/jpeg", "image/webp", "image/gif"]
+    })
+  });
+}
+
 async function loadStore() {
   if (USE_SUPABASE) {
     const rows = await supabaseRequest("/rest/v1/reservations?select=*&order=created_at.desc");
@@ -534,6 +558,7 @@ function parseReceipt(dataUrl, originalName) {
 async function saveReceipt(dataUrl, originalName) {
   const receipt = parseReceipt(dataUrl, originalName);
   if (USE_SUPABASE) {
+    await ensureSupabaseReceiptBucket();
     await supabaseRequest(`/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodeURIComponent(receipt.fileName)}`, {
       method: "POST",
       headers: {
@@ -639,7 +664,8 @@ async function handleApi(req, res, url) {
     sendJson(res, 200, {
       ok: true,
       storage: USE_SUPABASE ? "supabase" : "local",
-      adminConfigured: Boolean(ADMIN_KEY)
+      adminConfigured: Boolean(ADMIN_KEY),
+      receiptBucket: USE_SUPABASE ? SUPABASE_BUCKET : "local"
     });
     return true;
   }
