@@ -39,11 +39,11 @@
     "telefono": "+526371117331"
   },
   "pago": {
-    "banco": "BBVA",
-    "tarjeta": "4152 3145 1402 6742",
+    "banco": "Banamex",
+    "tarjeta": "5204 1604 1356 9828",
     "clabe": "",
-    "titular": "Valeria Michelle Guerra",
-    "nota": "Al apartar tus boletos sube la imagen del comprobante. El pago se verifica desde el panel de administracion."
+    "titular": "Jorge Andres Guerra",
+    "nota": "Aparta tus boletos y despues sube la imagen del comprobante en Verificar. El pago se confirma desde administracion."
   },
   "inicio": {
     "botonDisponibles": "-LISTA DE DISPONIBLES-",
