@@ -20,10 +20,10 @@
   },
   "sorteo": {
     "estado": "Disponible",
-    "premio": "Premio de 6000 pesos",
-    "descripcion": "Primer sorteo de $6,000 pesos. La rifa se realiza cuando se vendan todos los boletos y el ganador se tomara de los ultimos 2 digitos del Premio Mayor de Loteria Nacional. Si el Premio Mayor termina en 00, se usaran los ultimos 2 digitos del segundo lugar.",
-    "precio": "$100",
-    "textoPrecio": "boleto",
+    "premio": "sorteo cerrado",
+    "descripcion": "sorteos cerrado.",
+    "precio": "$",
+    "textoPrecio": "",
     "porcentajeVendido": 68
   },
   "boletos": {
@@ -40,10 +40,10 @@
   },
   "pago": {
     "banco": "Banamex",
-    "tarjeta": "5204 1604 1356 9828",
+    "tarjeta": "",
     "clabe": "",
-    "titular": "Jorge Andres Guerra",
-    "nota": "Aparta tus boletos y despues sube la imagen del comprobante en Verificar. El pago se confirma desde administracion."
+    "titular": "",
+    "nota": "."
   },
   "inicio": {
     "botonDisponibles": "-LISTA DE DISPONIBLES-",
